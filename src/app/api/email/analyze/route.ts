@@ -1,124 +1,85 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import { analyzeEmailLocally } from "@/lib/email-analyzer";
-
-const ANALYSIS_PROMPT = `You are Jerry, an autonomous AI intelligence system specializing in email analysis.
-
-Analyze the provided email and return a JSON object with this exact structure:
-{
-  "category": "work" | "recruiter" | "newsletter" | "personal" | "finance" | "academic" | "promotional" | "spam",
-  "urgency": "critical" | "high" | "medium" | "low",
-  "tone": "professional" | "friendly" | "urgent" | "aggressive" | "neutral" | "suspicious",
-  "summary": "A 1-2 sentence summary of what this email is about and what it requires.",
-  "deadlines": ["Array of specific deadlines mentioned, formatted clearly"],
-  "actionItems": ["Array of specific actions the recipient needs to take"],
-  "isPhishing": true | false,
-  "phishingReason": "If isPhishing is true, explain the red flags. Otherwise omit.",
-  "importanceScore": 7,
-  "draftReply": "A natural, professional draft reply in first person. If phishing or newsletter, return null."
-}
-
-Guidelines:
-- importanceScore: 1-10 (10 = most important)
-- isPhishing: Check for suspicious domains, urgency manipulation, unusual links, impersonation
-- draftReply: Natural and human-sounding. Set to null for newsletters/phishing.
-
-Return ONLY valid JSON, no markdown.`;
 
 export async function POST(req: Request) {
   try {
-    let { subject, from, body } = await req.json();
+    let bodyData = await req.json();
+    const { subject, from, body, headers, raw_headers_list, attachments } = bodyData;
 
     if (body === undefined || body === null) {
       return NextResponse.json({ error: "No email body provided" }, { status: 400 });
     }
 
-    if (typeof body === "string" && body.trim() === "") {
-      body = "(No content)";
-    }
+    const cleanBody = typeof body === "string" && body.trim() === "" ? "(No body content)" : body;
 
-    const geminiKey = req.headers.get("x-gemini-api-key") || process.env.GEMINI_API_KEY;
-    const openaiKey = req.headers.get("x-openai-api-key") || process.env.OPENAI_API_KEY;
+    // 1. Authoritative: Send to Python FastAPI backend for Phase 2 Extraction & Phase 3 Deterministic Threat Detection
+    const fastApiUrl = process.env.FASTAPI_URL || "http://127.0.0.1:8000";
+    try {
+      const response = await fetch(`${fastApiUrl}/api/v1/threats/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: subject || "(No Subject)",
+          sender: from || "Unknown",
+          body: cleanBody,
+          headers: headers || undefined,
+          raw_headers_list: raw_headers_list || undefined,
+          attachments: attachments || undefined,
+          gemini_api_key: process.env.GEMINI_API_KEY,
+          openai_api_key: process.env.OPENAI_API_KEY,
+        }),
+      });
 
-    // 1. Try Gemini first if key is present
-    if (geminiKey) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `${ANALYSIS_PROMPT}\n\nEmail to analyze:\nFrom: ${from}\nSubject: ${subject}\n\n${body}`
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              responseMimeType: "application/json"
-            }
-          })
+      if (response.ok) {
+        const data = await response.json();
+        // Convert snake_case backend response to camelCase for Next.js store compatibility if needed
+        return NextResponse.json({
+          threatScore: data.threat_score,
+          severity: data.severity,
+          classification: data.classification,
+          confidence: data.confidence,
+          summary: data.summary,
+          reasons: data.reasons,
+          structuredReasons: data.structured_reasons,
+          signals: data.signals,
+          indicators: (data.indicators || []).map((ind: any) => ({
+            indicatorType: ind.indicator_type,
+            value: ind.value,
+            context: ind.context,
+            isMalicious: ind.is_malicious,
+          })),
+          evidence: (data.evidence || []).map((ev: any) => ({
+            fieldName: ev.field_name,
+            rawValue: ev.raw_value,
+            description: ev.description,
+            isAnomalous: ev.is_anomalous,
+          })),
+          aiExplanation: data.ai_explanation ? {
+            summary: data.ai_explanation.summary,
+            keyFindings: data.ai_explanation.key_findings,
+            evidenceReferences: data.ai_explanation.evidence_references,
+            recommendedNextStep: data.ai_explanation.recommended_next_step,
+            limitations: data.ai_explanation.limitations,
+          } : undefined,
+          source: data.source,
+          analyzedAt: data.analyzed_at,
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            const result = JSON.parse(text);
-            result.analyzedAt = new Date().toISOString();
-            result.source = "gemini-2.5-flash";
-            return NextResponse.json(result);
-          }
-        } else {
-          console.warn("Gemini API call failed with status:", response.status);
-        }
-      } catch (geminiError) {
-        console.warn("Error calling Gemini API:", geminiError);
       }
+    } catch (backendErr) {
+      console.warn("[Threat Analysis] FastAPI backend unavailable, executing local deterministic engine:", backendErr);
     }
 
-    // 2. Try OpenAI as fallback/secondary option
-    if (openaiKey) {
-      try {
-        const openai = new OpenAI({ apiKey: openaiKey });
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: ANALYSIS_PROMPT,
-            },
-            {
-              role: "user",
-              content: `From: ${from}\nSubject: ${subject}\n\n${body}`,
-            },
-          ],
-          response_format: { type: "json_object" },
-        });
-
-        const text = completion.choices[0]?.message.content;
-        if (text) {
-          const result = JSON.parse(text);
-          result.analyzedAt = new Date().toISOString();
-          result.source = "gpt-4o";
-          return NextResponse.json(result);
-        }
-      } catch (openaiError) {
-        console.warn("Error calling OpenAI API:", openaiError);
-      }
-    }
-
-    // 3. Rule-based local fallback if all APIs fail
-    const result = analyzeEmailLocally({ subject, from, body });
-    (result as any).source = "local";
+    // 2. Deterministic local rule engine fallback when backend is offline
+    const result = analyzeEmailLocally({
+      subject: subject || "No Subject",
+      from: from || "Unknown",
+      body: cleanBody,
+    });
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error("Email analysis error:", error);
+    console.error("Threat analysis route error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to analyze email" },
+      { error: "The threat analysis service could not complete the request. Please try again." },
       { status: 500 }
     );
   }

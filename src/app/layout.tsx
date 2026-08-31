@@ -1,25 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AuthProvider } from "@/components/auth/providers";
-import { ProactiveEngine } from "@/components/layout/proactive-engine";
-import { EmailAgentEngine } from "@/components/layout/email-agent-engine";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
-  title: "Jerry | Personal Intelligence",
-  description: "Autonomous personal intelligence operating system",
+  title: "Jerry Security Intelligence | Threat Detection & Forensic Intelligence",
+  description: "AI-Powered Email Threat Detection, Geolocation & Forensic Intelligence Platform",
 };
 
 export default function RootLayout({
@@ -28,16 +15,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
-    >
-      <body className="flex h-screen overflow-hidden bg-background text-foreground">
+    <html lang="en" className="h-full antialiased dark font-sans">
+      <body className="flex h-screen overflow-hidden bg-background text-foreground selection:bg-red-500/20 selection:text-red-300">
         <AuthProvider>
-          <ProactiveEngine />
-          <EmailAgentEngine />
           <Sidebar />
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto bg-background/95">
             {children}
           </main>
           <Toaster />

@@ -1,350 +1,385 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import {
-  Upload, FileAudio, ArrowRight, Activity, Loader2, FileText,
-  CheckCircle2, Brain, CalendarDays, Clock, TrendingUp, Zap,
+  ShieldAlert,
+  ShieldCheck,
+  Mail,
+  AlertTriangle,
+  FileSearch,
+  ArrowRight,
+  Sparkles,
+  Loader2,
+  CheckCircle2,
+  Radio,
+  Activity,
+  Network,
+  Cpu,
+  Layers,
+  Database,
+  Search,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
-import { useMemoryStore } from "@/lib/memory-store";
-import { useEmailStore } from "@/lib/email-store";
-import { useReactToPrint } from "react-to-print";
-import { format, isToday, isTomorrow, addDays, isWithinInterval } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { useEmailStore, EmailThread } from "@/lib/email-store";
+import { format } from "date-fns";
 import Link from "next/link";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { SeverityBadge } from "@/components/security/SeverityBadge";
+import { SecurityMetricCard } from "@/components/security/SecurityMetricCard";
+import { RiskScoreGauge } from "@/components/security/RiskScoreGauge";
+import { EmptyState } from "@/components/security/EmptyState";
+import { SectionHeader } from "@/components/security/SectionHeader";
 
-const EVENT_COLORS: Record<string, string> = {
-  blue: "bg-blue-500/20 text-blue-400 ring-blue-500/30",
-  purple: "bg-purple-500/20 text-purple-400 ring-purple-500/30",
-  red: "bg-red-500/20 text-red-400 ring-red-500/30",
-  green: "bg-green-500/20 text-green-400 ring-green-500/30",
-};
+export default function SecurityDashboard() {
+  const { emails, updateAnalysis, geminiApiKey, openaiApiKey } = useEmailStore();
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
 
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
-}
+  // Real telemetry metrics (grounded in actual state)
+  const totalEmails = emails.length;
+  const analyzedEmails = emails.filter((e) => !!e.threatAnalysis);
+  const threatsDetected = emails.filter((e) => (e.threatAnalysis?.threatScore ?? 0) >= 40).length;
+  const criticalThreats = emails.filter(
+    (e) => e.threatAnalysis?.severity === "critical" || e.threatAnalysis?.severity === "high"
+  ).length;
+  const pendingTriage = emails.filter((e) => !e.threatAnalysis).length;
 
-function formatEventDate(isoDate: string) {
-  const d = new Date(isoDate);
-  if (isToday(d)) return "Today";
-  if (isTomorrow(d)) return "Tomorrow";
-  return format(d, "EEE, MMM d");
-}
-
-export default function Home() {
-  const [isDragging, setIsDragging] = useState(false);
-  const [status, setStatus] = useState<"idle" | "uploading" | "analyzing" | "complete">("idle");
-  const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{
-    summary: string; actionItems: string[]; topics: string[]; transcript: string;
-  } | null>(null);
-  const [fileName, setFileName] = useState("");
-
-  const reportRef = useRef<HTMLDivElement>(null);
-  const handlePrint = useReactToPrint({
-    contentRef: reportRef,
-    documentTitle: "Jerry_Intelligence_Report",
-  });
-
-  const { meetings, events, addMeeting } = useMemoryStore();
-  const { geminiApiKey, openaiApiKey } = useEmailStore();
-
-  const upcomingEvents = events
-    .filter((e) => isWithinInterval(new Date(e.date), { start: new Date(), end: addDays(new Date(), 7) }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 4);
-
-  const totalActionItems = meetings.reduce((sum, m) => sum + m.actionItems.length, 0);
-
-  const handleFile = async (file: File) => {
-    if (!file.type.startsWith("audio/") && !file.name.match(/\.(mp3|wav|m4a)$/i)) {
-      toast.error("Please upload a valid audio file (MP3, WAV, M4A).");
-      return;
-    }
-    if (file.size > 200 * 1024 * 1024) {
-      toast.error("File size exceeds the 200MB limit. Please upload a smaller file.");
-      return;
-    }
-    setFileName(file.name);
+  const handleQuickAnalyze = async (email: EmailThread) => {
+    if (analyzingId) return;
+    setAnalyzingId(email.id);
     try {
-      setStatus("uploading");
-      setProgress(20);
-
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (geminiApiKey) headers["x-gemini-api-key"] = geminiApiKey;
       if (openaiApiKey) headers["x-openai-api-key"] = openaiApiKey;
 
-      const transcribeRes = await fetch("/api/transcribe", { 
-        method: "POST", 
-        headers,
-        body: formData 
-      });
-      if (!transcribeRes.ok) throw new Error("Transcription failed");
-      const { text: transcript } = await transcribeRes.json();
-
-      setProgress(60);
-      setStatus("analyzing");
-
-      const analyzeHeaders: Record<string, string> = { "Content-Type": "application/json" };
-      if (geminiApiKey) analyzeHeaders["x-gemini-api-key"] = geminiApiKey;
-      if (openaiApiKey) analyzeHeaders["x-openai-api-key"] = openaiApiKey;
-
-      const analyzeRes = await fetch("/api/analyze", {
+      const res = await fetch("/api/email/analyze", {
         method: "POST",
-        headers: analyzeHeaders,
-        body: JSON.stringify({ transcript }),
-      });
-      if (!analyzeRes.ok) throw new Error("Analysis failed");
-      const analysis = await analyzeRes.json();
-
-      setResult({ ...analysis, transcript });
-      setProgress(100);
-      setStatus("complete");
-
-      // Auto-save to memory store
-      addMeeting({
-        title: analysis.topics?.[0] || file.name.replace(/\.[^.]+$/, ""),
-        transcript,
-        summary: analysis.summary,
-        actionItems: analysis.actionItems,
-        topics: analysis.topics,
+        headers,
+        body: JSON.stringify({
+          subject: email.subject,
+          from: email.fromEmail || email.from,
+          body: email.body,
+          html_body: email.htmlBody,
+          headers: email.headers,
+          raw_headers_list: email.rawHeadersList,
+          attachments: email.attachments,
+        }),
       });
 
-      toast.success("Saved to Jerry's memory!");
-    } catch (error: any) {
-      toast.error(error.message || "An error occurred");
-      setStatus("idle");
-      setProgress(0);
+      if (!res.ok) {
+        throw new Error("Threat analysis service failed");
+      }
+
+      const analysis = await res.json();
+      updateAnalysis(email.id, analysis);
+      toast.success(`Threat analysis complete: Score ${analysis.threatScore}/100 (${analysis.severity.toUpperCase()})`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to analyze email threat");
+    } finally {
+      setAnalyzingId(null);
     }
   };
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-10 h-full overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-bold tracking-tight"
-          >
-            {getGreeting()}.
-          </motion.h1>
-          <p className="text-muted-foreground mt-1">Your cognitive layer is ready.</p>
+    <div className="space-y-6 p-6 lg:p-8 max-w-7xl mx-auto h-full overflow-y-auto">
+      {/* Top Threat Command Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-5"
+      >
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+            <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 font-bold">
+              SOC Command Center · Real-time Triage
+            </span>
+          </div>
+          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-foreground">
+            Threat Intelligence & Telemetry
+          </h1>
+          <p className="text-muted-foreground text-xs lg:text-sm">
+            AI-powered email threat detection, deterministic forensic extraction, and cross-email IOC correlation.
+          </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-card border rounded-full px-3 py-1.5">
-          <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          All systems operational
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Link href="/investigations">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs font-mono gap-1.5 border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground"
+            >
+              <Network className="h-3.5 w-3.5 text-cyan-400" />
+              Investigation Graph
+            </Button>
+          </Link>
+          <Link href="/email">
+            <Button
+              size="sm"
+              className="bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs gap-1.5 shadow-md shadow-cyan-600/20"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Triage Workspace
+            </Button>
+          </Link>
         </div>
+      </motion.div>
+
+      {/* Primary Telemetry Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <SecurityMetricCard
+            title="Ingested Emails"
+            value={totalEmails}
+            subtitle={`${analyzedEmails.length} fully evaluated`}
+            icon={Mail}
+            variant="cyan"
+            badgeText="TELEMETRY"
+          />
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <SecurityMetricCard
+            title="Threats Isolated"
+            value={threatsDetected}
+            subtitle={threatsDetected > 0 ? "Malicious artifacts detected" : "No active threats"}
+            icon={ShieldAlert}
+            variant={threatsDetected > 0 ? "red" : "emerald"}
+            badgeText={threatsDetected > 0 ? "ACTION REQUIRED" : "CLEAN"}
+          />
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <SecurityMetricCard
+            title="High / Critical Risk"
+            value={criticalThreats}
+            subtitle={criticalThreats > 0 ? "Immediate containment" : "Zero high severity"}
+            icon={AlertTriangle}
+            variant={criticalThreats > 0 ? "red" : "emerald"}
+            badgeText="0–100 RISK"
+          />
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <SecurityMetricCard
+            title="Pending Triage"
+            value={pendingTriage}
+            subtitle={pendingTriage > 0 ? "Awaiting signal scoring" : "Queue clear"}
+            icon={FileSearch}
+            variant={pendingTriage > 0 ? "amber" : "neutral"}
+            badgeText="QUEUE"
+          />
+        </motion.div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { label: "Meetings Recorded", value: meetings.length, icon: Brain, color: "text-violet-400" },
-          { label: "Action Items", value: totalActionItems, icon: Zap, color: "text-yellow-400" },
-          { label: "Topics Tracked", value: meetings.reduce((s, m) => s + m.topics.length, 0), icon: TrendingUp, color: "text-blue-400" },
-          { label: "Upcoming Events", value: upcomingEvents.length, icon: CalendarDays, color: "text-green-400" },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07 }}
-          >
-            <Card className="relative overflow-hidden">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
-                  </div>
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+      {/* Main Command Console Grid */}
+      <div className="grid gap-6 lg:grid-cols-12 items-start">
+        {/* Left Column: Live Ingested Email Stream (8 cols) */}
+        <div className="lg:col-span-8 space-y-4">
+          <SectionHeader
+            title="Live Email Threat Triage Stream"
+            description="Recent messages evaluated through deterministic rule scoring and multi-hop transport inspection."
+            icon={Activity}
+            badge={`${emails.length} Messages`}
+            badgeVariant="cyan"
+            actions={
+              <Link href="/email" className="text-xs font-mono text-cyan-400 hover:underline flex items-center gap-1">
+                View All <ArrowRight className="h-3 w-3" />
+              </Link>
+            }
+          />
 
-      {/* Main Grid */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Upload Card */}
-        <Card className="lg:col-span-2 overflow-hidden">
-          <CardHeader>
-            <CardTitle>New Recording</CardTitle>
-            <CardDescription>Upload meeting or class audio for transcription and analysis.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AnimatePresence mode="wait">
-              {status === "idle" && (
-                <motion.div
-                  key="idle"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className={`group relative flex h-56 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors ${isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-accent/50"}`}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
-                  onClick={() => { const i = document.createElement("input"); i.type = "file"; i.accept = "audio/*,.m4a"; i.onchange = (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleFile(f); }; i.click(); }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                  <div className="z-10 flex flex-col items-center space-y-4 text-center">
-                    <div className="rounded-full bg-primary/10 p-4 ring-1 ring-primary/25">
-                      <Upload className="h-8 w-8 text-primary" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                      <p className="text-xs text-muted-foreground">MP3, WAV, or M4A (max 200MB)</p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+          {emails.length === 0 ? (
+            <EmptyState
+              icon={Mail}
+              title="No Ingested Emails"
+              description="Connect your Gmail account in Settings or sync the mailbox to begin forensic extraction."
+              actionLabel="Configure Gmail Connector"
+              onAction={() => window.location.assign("/settings")}
+            />
+          ) : (
+            <div className="space-y-2.5">
+              {emails.slice(0, 5).map((email, idx) => {
+                const isAnalyzed = !!email.threatAnalysis;
+                const severity = email.threatAnalysis?.severity || "clean";
+                const score = email.threatAnalysis?.threatScore;
+                const signalsCount = email.threatAnalysis?.signals?.length || 0;
+                const source = email.source || "EML";
 
-              {(status === "uploading" || status === "analyzing") && (
-                <motion.div
-                  key="loading"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="flex h-56 flex-col items-center justify-center space-y-6"
-                >
-                  <div className="relative">
-                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
-                      <Loader2 className="h-7 w-7 animate-spin text-primary" />
-                    </div>
-                  </div>
-                  <div className="space-y-2 text-center w-3/4">
-                    <p className="text-sm font-medium">
-                      {status === "uploading" ? "🎙️ Transcribing audio via Whisper..." : "🧠 Analyzing with GPT-4o..."}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{fileName}</p>
-                    <Progress value={progress} className="h-1.5 w-full" />
-                  </div>
-                </motion.div>
-              )}
+                return (
+                  <motion.div
+                    key={email.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <Card className="border-border/40 bg-card/50 hover:bg-card/80 transition-all hover:border-cyan-500/30">
+                      <CardContent className="p-3.5 lg:p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[8px] font-mono uppercase px-1.5 py-0 font-bold",
+                                  source === "GMAIL"
+                                    ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30"
+                                    : source === "DEMO"
+                                    ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                                    : "bg-purple-500/10 text-purple-400 border-purple-500/30"
+                                )}
+                              >
+                                {source === "GMAIL" ? "GMAIL • LIVE" : source === "DEMO" ? "DEMO • SAMPLE" : "EML • UPLOADED"}
+                              </Badge>
 
-              {status === "complete" && result && (
-                <motion.div
-                  key="complete"
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="space-y-5 py-2"
-                >
-                  <div ref={reportRef} className="space-y-5 p-5 rounded-xl bg-muted/50 border">
-                    <div className="flex items-center gap-2 text-green-400">
-                      <CheckCircle2 className="h-5 w-5" />
-                      <h3 className="font-semibold text-foreground">Analysis Complete · Saved to Memory</h3>
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Summary</h4>
-                      <p className="text-sm leading-relaxed">{result.summary}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-5">
-                      <div>
-                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Action Items</h4>
-                        <ul className="space-y-1.5">
-                          {result.actionItems.map((item, i) => (
-                            <li key={i} className="flex gap-2 text-sm">
-                              <Zap className="h-3.5 w-3.5 mt-0.5 text-yellow-400 shrink-0" />
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Topics</h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {result.topics.map((topic, i) => (
-                            <span key={i} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium">{topic}</span>
-                          ))}
+                              <span className="text-xs font-bold text-foreground truncate max-w-[200px]">
+                                {email.from}
+                              </span>
+
+                              <span className="text-[10px] text-muted-foreground font-mono" suppressHydrationWarning>
+                                {format(new Date(email.receivedAt), "MMM d, HH:mm")}
+                              </span>
+
+                              {isAnalyzed ? (
+                                <SeverityBadge severity={severity} score={score} size="sm" />
+                              ) : (
+                                <span className="rounded bg-muted/60 px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground border border-border/40">
+                                  UNREVIEWED
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs font-semibold text-foreground truncate">{email.subject}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{email.preview}</p>
+
+                            {isAnalyzed && signalsCount > 0 && (
+                              <div className="mt-1.5 text-[10px] font-mono text-muted-foreground bg-background/60 p-1.5 rounded border border-border/30 flex items-center gap-2">
+                                <span className="font-bold text-red-400 shrink-0">{signalsCount} Threat Signal(s):</span>
+                                <span className="truncate">
+                                  {email.threatAnalysis?.signals?.[0]?.title || email.threatAnalysis?.reasons?.[0]}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                            {!isAnalyzed ? (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="text-xs h-7 font-mono gap-1"
+                                disabled={analyzingId === email.id}
+                                onClick={() => handleQuickAnalyze(email)}
+                              >
+                                {analyzingId === email.id ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 animate-spin text-cyan-400" />
+                                    Triage...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-3 w-3 text-cyan-400" />
+                                    Analyze
+                                  </>
+                                )}
+                              </Button>
+                            ) : (
+                              <Link href="/email">
+                                <Button size="sm" variant="outline" className="text-xs h-7 font-mono gap-1 text-muted-foreground hover:text-foreground">
+                                  Inspect <ArrowRight className="h-3 w-3" />
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setStatus("idle"); setResult(null); setProgress(0); }}>Process Another</Button>
-                    <Link
-                      href="/meetings"
-                      className="inline-flex items-center justify-center h-7 gap-1 px-2.5 rounded-[min(var(--radius-md),12px)] bg-primary text-primary-foreground text-[0.8rem] font-medium transition-all hover:opacity-90"
-                    >
-                      View in Memory
-                    </Link>
-                    <Button size="sm" variant="secondary" onClick={() => handlePrint()}>
-                      <FileText className="mr-2 h-3.5 w-3.5" />Export PDF
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </CardContent>
-        </Card>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-        {/* Upcoming Events */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base">Upcoming</CardTitle>
-            <Link href="/calendar" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View Calendar →</Link>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {upcomingEvents.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">No upcoming events.</p>
-            )}
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className={`flex items-start gap-3 rounded-lg p-3 ring-1 ${EVENT_COLORS[event.color || "blue"]}`}>
-                <Clock className="h-4 w-4 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{event.title}</p>
-                  <p className="text-xs opacity-70 mt-0.5">
-                    {formatEventDate(event.date)}{event.time ? ` · ${event.time}` : ""}
-                  </p>
+        {/* Right Column: Engine Posture & Quick Launch (4 cols) */}
+        <div className="lg:col-span-4 space-y-4">
+          <SectionHeader
+            title="Detection Engine Health"
+            icon={Cpu}
+            badge="ACTIVE"
+            badgeVariant="cyan"
+          />
+
+          <Card className="border-border/50 bg-card/50 backdrop-blur-xl">
+            <CardContent className="p-4 space-y-3 text-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-background/60 border border-border/30">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-semibold text-foreground">Deterministic Rule Engine</span>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-mono text-emerald-400 border-emerald-500/30">
+                  OPERATIONAL
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-background/60 border border-border/30">
+                <div className="flex items-center gap-2">
+                  <span className={cn("h-2 w-2 rounded-full", geminiApiKey || openaiApiKey ? "bg-emerald-500" : "bg-cyan-500")} />
+                  <span className="font-semibold text-foreground">AI Forensic Explanation</span>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-mono text-muted-foreground">
+                  {geminiApiKey ? "Gemini 2.5 Flash" : openaiApiKey ? "GPT-4o" : "Local Engine"}
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-background/60 border border-border/30">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-blue-500" />
+                  <span className="font-semibold text-foreground">Cross-Email Graph Engine</span>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-mono text-blue-400 border-blue-500/30">
+                  BFS DEPTH: 2
+                </Badge>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground/80 leading-relaxed border-t border-border/30 pt-2 font-mono">
+                Authoritative 0–100 threat scores are computed deterministically. AI reasoning provides explainable summaries without altering evidence.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Quick Investigation Launch */}
+          <Card className="border-border/50 bg-card/50 backdrop-blur-xl">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Network className="h-3.5 w-3.5 text-cyan-400" />
+                Active Investigation Dossier
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-1 space-y-2 text-xs font-mono">
+              <div className="p-2.5 rounded bg-background/70 border border-border/30 space-y-1">
+                <span className="text-[10px] text-cyan-400 font-bold block">CASE-2026-001</span>
+                <p className="text-foreground font-semibold line-clamp-1">Bank Credential Harvesting Phishing Campaign</p>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
+                  <span>2 Correlated Emails</span>
+                  <SeverityBadge severity="critical" score={92} size="sm" />
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Recent Meetings Memory */}
-      {meetings.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Recent Memory</h2>
-            <Link href="/meetings" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View All →</Link>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {meetings.slice(0, 3).map((m, i) => (
-              <motion.div
-                key={m.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-              >
-                <Link href={`/meetings/${m.id}`}>
-                  <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
-                    <CardContent className="pt-5 pb-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Brain className="h-4 w-4 text-violet-400 shrink-0" />
-                        <p className="text-sm font-medium truncate">{m.title}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{m.summary}</p>
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="text-xs text-muted-foreground">{format(new Date(m.createdAt), "MMM d, yyyy")}</span>
-                        <span className="text-xs text-muted-foreground">{m.actionItems.length} action{m.actionItems.length !== 1 ? "s" : ""}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
+              <Link href="/investigations" className="block pt-1">
+                <Button variant="outline" className="w-full text-xs font-mono h-8 gap-1.5 border-border/60 hover:border-cyan-500/40">
+                  Open Investigation Console <ArrowRight className="h-3 w-3 text-cyan-400" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
-      )}
+      </div>
     </div>
   );
 }

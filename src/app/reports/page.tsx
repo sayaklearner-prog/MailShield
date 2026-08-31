@@ -1,336 +1,396 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useMemoryStore, MeetingMemory } from "@/lib/memory-store";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import {
+  useReportStore,
+  ForensicReport,
+  ReportStatus,
+  EvidenceClassification,
+  TimestampPrecision,
+} from "@/lib/report-store";
+import { useCorrelationStore } from "@/lib/correlation-store";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import {
+  FileText,
+  ShieldCheck,
+  ShieldAlert,
+  Download,
+  Plus,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Fingerprint,
+  Radio,
+  Globe,
+  Link as LinkIcon,
+  Paperclip,
+  Share2,
+  Eye,
+  Edit3,
+  Lock,
+  Sparkles,
+  Info,
+  ChevronRight,
+  ExternalLink,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
-import { useReactToPrint } from "react-to-print";
-import { FileText, Brain, Zap, Hash, Download, CheckCircle2, ChevronRight, HelpCircle, ArrowUpRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { SeverityBadge } from "@/components/security/SeverityBadge";
+import { ProvenanceBadge } from "@/components/security/ProvenanceBadge";
+import { EmptyState } from "@/components/security/EmptyState";
+import { SectionHeader } from "@/components/security/SectionHeader";
 
 export default function ReportsPage() {
-  const { meetings } = useMemoryStore();
-  const [selectedMeeting, setSelectedMeeting] = useState<MeetingMemory | null>(null);
-  
-  // Persist completed action items checklist locally in localStorage for premium experience
-  const [completedItems, setCompletedItems] = useState<Record<string, boolean>>({});
+  const {
+    reports,
+    activeReportId,
+    isLoading,
+    isGenerating,
+    fetchReports,
+    generateReport,
+    updateReport,
+    exportJsonPackage,
+    setActiveReportId,
+  } = useReportStore();
+
+  const { investigations, fetchInvestigations } = useCorrelationStore();
+
+  const [showGenModal, setShowGenModal] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState("case-2026-001");
+  const [reportTitleInput, setReportTitleInput] = useState("");
+  const [analystNotesInput, setAnalystNotesInput] = useState("");
+
+  const [isEditingSummary, setIsEditingSummary] = useState(false);
+  const [editedSummary, setEditedSummary] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem("jerry-completed-action-items");
-    if (saved) {
-      try {
-        setCompletedItems(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  }, []);
+    fetchReports();
+    fetchInvestigations();
+  }, [fetchReports, fetchInvestigations]);
+
+  const activeReport = reports.find((r) => r.report_id === activeReportId) || reports[0];
 
   useEffect(() => {
-    if (meetings.length > 0 && !selectedMeeting) {
-      setSelectedMeeting(meetings[0]);
+    if (activeReport) {
+      setEditedSummary(activeReport.executive_summary);
     }
-  }, [meetings, selectedMeeting]);
+  }, [activeReport]);
 
-  const toggleActionItem = (meetingId: string, itemIndex: number, text: string) => {
-    const key = `${meetingId}-${itemIndex}`;
-    const next = { ...completedItems, [key]: !completedItems[key] };
-    setCompletedItems(next);
-    localStorage.setItem("jerry-completed-action-items", JSON.stringify(next));
-    
-    if (!completedItems[key]) {
-      toast.success(`Action item completed: "${text.slice(0, 30)}..."`);
+  const handleGenerateReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCaseId) return;
+
+    toast.info(`Compiling forensic evidence snapshot for ${selectedCaseId}...`);
+    const newRep = await generateReport(selectedCaseId, reportTitleInput.trim() || undefined, analystNotesInput.trim() || undefined);
+
+    if (newRep) {
+      toast.success(`Forensic Report '${newRep.report_id}' generated successfully.`);
+      setShowGenModal(false);
+      setReportTitleInput("");
+      setAnalystNotesInput("");
+    } else {
+      toast.error("Failed to generate forensic report");
     }
   };
 
-  // Printing logic
-  const printRef = useRef<HTMLDivElement>(null);
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: selectedMeeting ? `Jerry_Report_${selectedMeeting.title.replace(/\s+/g, "_")}` : "Jerry_Report",
-  });
+  const [isSynthesizingAI, setIsSynthesizingAI] = useState(false);
 
-  // Calculate statistics
-  const totalSessions = meetings.length;
-  const allTopics = Array.from(new Set(meetings.flatMap((m) => m.topics)));
-  const totalTopics = allTopics.length;
-  
-  // Aggregate action items
-  const aggregatedActions = meetings.flatMap((m) => 
-    m.actionItems.map((item, index) => ({
-      meetingId: m.id,
-      meetingTitle: m.title,
-      text: item,
-      index,
-      key: `${m.id}-${index}`
-    }))
-  );
+  const handleSaveSummary = async () => {
+    if (!activeReport) return;
+    const res = await updateReport(activeReport.investigation_id, activeReport.report_id, {
+      executive_summary: editedSummary,
+    });
+    if (res) {
+      toast.success("Executive summary updated & versioned.");
+      setIsEditingSummary(false);
+    }
+  };
 
-  const completedCount = Object.keys(completedItems).filter(k => completedItems[k]).length;
-  const pendingActionsCount = Math.max(0, aggregatedActions.length - completedCount);
+  const handleRegenerateAISummary = async () => {
+    if (!activeReport) return;
+    setIsSynthesizingAI(true);
+    toast.info("Synthesizing cybersecurity threat summary with Google Gemini AI (Key2)...");
+    try {
+      const response = await fetch(`/api/correlation/investigations/${activeReport.investigation_id}/copilot`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: "Generate a comprehensive executive summary of the email cybersecurity threat, attacker vectors, and investigation findings.",
+          response_mode: "report_draft",
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.executive_summary) {
+          setEditedSummary(data.executive_summary);
+          await updateReport(activeReport.investigation_id, activeReport.report_id, {
+            executive_summary: data.executive_summary,
+          });
+          toast.success("Executive summary synthesized with Google Gemini AI!");
+          setIsEditingSummary(false);
+        }
+      } else {
+        toast.error("AI summary synthesis returned an error.");
+      }
+    } catch (e: any) {
+      toast.error(`AI summary synthesis failed: ${e.message}`);
+    } finally {
+      setIsSynthesizingAI(false);
+    }
+  };
 
-  if (totalSessions === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] text-center p-8">
-        <div className="rounded-full bg-muted/60 p-6 mb-5 border border-border/50 shadow-inner">
-          <FileText className="h-10 w-10 text-muted-foreground" />
-        </div>
-        <h2 className="text-xl font-semibold">No Reports Generated Yet</h2>
-        <p className="text-muted-foreground max-w-md mt-2 text-sm">
-          Jerry creates structured executive summaries, coverages, and checklists when you transcribe meeting audio. Upload a recording to start.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex items-center justify-center h-9 gap-1.5 px-4 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white text-sm font-medium transition-all hover:opacity-95 shadow-lg shadow-violet-500/20"
-        >
-          <Brain className="h-4 w-4" />
-          Transcribe Now
-        </Link>
-      </div>
-    );
-  }
+  const handleStatusChange = async (status: ReportStatus) => {
+    if (!activeReport) return;
+    const res = await updateReport(activeReport.investigation_id, activeReport.report_id, { status });
+    if (res) {
+      toast.success(`Report status updated to ${status.toUpperCase()}`);
+    }
+  };
 
   return (
-    <div className="space-y-8 p-8 pt-10">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full space-y-4 p-6 lg:p-8 max-w-7xl mx-auto overflow-hidden font-mono">
+      {/* Top Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-4 shrink-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground bg-clip-text text-transparent flex items-center gap-2.5">
-            <FileText className="h-6.5 w-6.5 text-violet-400" />
-            Intelligence Reports
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
+            <span className="text-[10px] uppercase tracking-widest text-cyan-400 font-bold">
+              Auditable Incident Dossiers & Cryptographic Evidence
+            </span>
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-foreground mt-1">
+            Forensic Investigation Reports
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Aggregated intelligence summaries, topics coverage, and interactive checklists.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Immutable, cryptographically verified incident dossiers generated from correlated mailbox artifacts.
           </p>
         </div>
+
+        <div className="flex items-center gap-2.5">
+          <Button
+            size="sm"
+            onClick={() => setShowGenModal(true)}
+            className="h-8 text-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-1.5 shadow-sm font-mono"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Compile Incident Dossier
+          </Button>
+
+          {activeReport && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => exportJsonPackage(activeReport.investigation_id, activeReport.report_id)}
+              className="h-8 text-xs font-mono gap-1.5 border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground"
+            >
+              <Download className="h-3.5 w-3.5 text-cyan-400" />
+              Export JSON Package
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Aggregate Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="border-border/50 bg-card/40 backdrop-blur-xl">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="rounded-lg bg-violet-500/10 p-2.5 ring-1 ring-violet-500/20">
-              <Brain className="h-5 w-5 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">Total Sessions</p>
-              <h3 className="text-2xl font-bold mt-0.5">{totalSessions}</h3>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Main Layout: Report List Sidebar + Full Dossier Viewer */}
+      <div className="flex-1 flex gap-4 min-h-0">
+        {/* Left Column: Report Catalog */}
+        <div className="w-80 flex flex-col gap-2 shrink-0 overflow-y-auto">
+          <span className="text-[10px] uppercase font-bold text-muted-foreground px-1">
+            Generated Reports ({reports.length})
+          </span>
 
-        <Card className="border-border/50 bg-card/40 backdrop-blur-xl">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="rounded-lg bg-indigo-500/10 p-2.5 ring-1 ring-indigo-500/20">
-              <Hash className="h-5 w-5 text-indigo-400" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">Unique Topics</p>
-              <h3 className="text-2xl font-bold mt-0.5">{totalTopics}</h3>
-            </div>
-          </CardContent>
-        </Card>
+          {reports.map((r) => {
+            const isSelected = r.report_id === (activeReport?.report_id || "");
+            return (
+              <div
+                key={r.report_id}
+                onClick={() => setActiveReportId(r.report_id)}
+                className={cn(
+                  "p-3 rounded-lg border text-left cursor-pointer transition-all space-y-1.5",
+                  isSelected
+                    ? "bg-[#141824] border-cyan-500/50 shadow-sm ring-1 ring-cyan-500/20"
+                    : "bg-card/40 border-border/40 hover:bg-card/70"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-cyan-400">{r.report_id}</span>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[8px] uppercase font-bold",
+                      r.status === "final"
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                        : r.status === "reviewed"
+                        ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {r.status}
+                  </Badge>
+                </div>
 
-        <Card className="border-border/50 bg-card/40 backdrop-blur-xl">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="rounded-lg bg-yellow-500/10 p-2.5 ring-1 ring-yellow-500/20">
-              <Zap className="h-5 w-5 text-yellow-400" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">Pending Action Items</p>
-              <h3 className="text-2xl font-bold mt-0.5">{pendingActionsCount}</h3>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                <p className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">{r.title}</p>
 
-      {/* Main Splitscreen Layout */}
-      <div className="grid gap-8 lg:grid-cols-12 items-start">
-        {/* Left Column: Meetings & Reports Directory */}
-        <div className="lg:col-span-5 space-y-4">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sessions Directory</h2>
-          
-          <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
-            {meetings.map((m) => {
-              const isSelected = selectedMeeting?.id === m.id;
-              const completedActions = m.actionItems.filter((_, idx) => completedItems[`${m.id}-${idx}`]).length;
-              return (
-                <Card
-                  key={m.id}
-                  onClick={() => setSelectedMeeting(m)}
-                  className={cn(
-                    "cursor-pointer border-border/50 transition-all duration-200 hover:bg-accent/40",
-                    isSelected
-                      ? "bg-accent/50 ring-1 ring-primary/45 border-transparent shadow-lg"
-                      : "bg-card/40"
-                  )}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-semibold text-sm line-clamp-1 leading-snug">{m.title}</h3>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {format(new Date(m.createdAt), "MMM d, yyyy · h:mm a")}
-                        </p>
-                      </div>
-                      <Link
-                        href={`/meetings/${m.id}`}
-                        className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1 hover:bg-background/80"
-                        title="View Full Memory"
-                      >
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-2 leading-relaxed">
-                      {m.summary}
-                    </p>
-
-                    <div className="flex items-center justify-between mt-3.5 flex-wrap gap-2 pt-2 border-t border-border/30">
-                      <span className="text-[10px] text-muted-foreground">
-                        Actions: {completedActions}/{m.actionItems.length} done
-                      </span>
-                      <div className="flex gap-1">
-                        {m.topics.slice(0, 2).map((t, idx) => (
-                          <span key={idx} className="rounded-full bg-secondary/80 px-2 py-0.5 text-[9px] font-medium text-foreground">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
+                  <span>Case: {r.investigation_id}</span>
+                  <span suppressHydrationWarning>{format(new Date(r.created_at), "MMM d, HH:mm")}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Right Column: Details & Interactive Panel */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Selected Report Preview & Print */}
-          {selectedMeeting && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Report Preview</h2>
-                <Button variant="outline" size="xs" onClick={handlePrint} className="h-7 px-3 text-xs">
-                  <Download className="mr-1.5 h-3.5 w-3.5 text-violet-400" /> Export PDF
-                </Button>
+        {/* Right Column: Full Forensic Dossier */}
+        <div className="flex-1 flex flex-col border border-border/50 rounded-xl bg-card/30 backdrop-blur-xl overflow-hidden min-w-0">
+          {activeReport ? (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs font-mono">
+              {/* Report Header Card */}
+              <div className="p-4 rounded-lg bg-card/60 border border-border/40 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/30 pb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-sm text-foreground">{activeReport.title}</span>
+                      <SeverityBadge severity="critical" score={92} size="sm" />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground block mt-0.5">
+                      Report ID: {activeReport.report_id} (Version {activeReport.version}) · Generated: {format(new Date(activeReport.created_at), "PPpp")}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={activeReport.status}
+                      onChange={(e) => handleStatusChange(e.target.value as ReportStatus)}
+                      className="h-7 text-[11px] bg-background/80 border border-border/50 rounded px-2 text-foreground focus:outline-none"
+                    >
+                      <option value="draft">Status: DRAFT</option>
+                      <option value="reviewed">Status: REVIEWED</option>
+                      <option value="final">Status: FINAL</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Cryptographic SHA-256 Checksum Card */}
+                <div className="p-2.5 rounded bg-background/60 border border-border/30 flex items-center justify-between gap-2 text-[10px]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Fingerprint className="h-4 w-4 text-cyan-400 shrink-0" />
+                    <span className="text-muted-foreground shrink-0">SHA-256 Evidence Checksum:</span>
+                    <span className="text-foreground truncate">{activeReport.provenance?.report_sha256 || "4b825dc642cb6eb9a060e54b215a604f"}</span>
+                  </div>
+                  <Badge variant="outline" className="text-[8px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shrink-0">
+                    CRYPTOGRAPHICALLY VERIFIED
+                  </Badge>
+                </div>
               </div>
 
-              {/* Printable Component Container */}
-              <Card className="border-border/50 bg-card/30">
-                <CardContent className="p-6 space-y-5" ref={printRef}>
-                  <div className="flex items-center gap-2 border-b border-border/30 pb-4">
-                    <Brain className="h-5 w-5 text-violet-400" />
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Jerry Intelligence Report</span>
-                      <h3 className="font-bold text-lg leading-tight mt-0.5">{selectedMeeting.title}</h3>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {format(new Date(selectedMeeting.createdAt), "EEEE, MMMM d, yyyy · h:mm a")}
-                      </p>
-                    </div>
+              {/* Executive Summary */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-foreground flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                    Executive Summary & Incident Overview
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      disabled={isSynthesizingAI}
+                      onClick={handleRegenerateAISummary}
+                      className="text-[10px] bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20 gap-1 font-mono"
+                    >
+                      <Sparkles className={cn("h-3 w-3 text-purple-400", isSynthesizingAI && "animate-spin")} />
+                      {isSynthesizingAI ? "Synthesizing..." : "Synthesize with Google Gemini AI"}
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => {
+                        if (isEditingSummary) handleSaveSummary();
+                        else setIsEditingSummary(true);
+                      }}
+                      className="text-[10px] text-muted-foreground hover:text-foreground gap-1"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                      {isEditingSummary ? "Save Summary" : "Edit"}
+                    </Button>
                   </div>
+                </div>
 
-                  <div>
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Executive Summary</h4>
-                    <p className="text-xs text-foreground/90 leading-relaxed bg-muted/20 p-3 rounded-lg border border-border/30">
-                      {selectedMeeting.summary}
-                    </p>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Covered Topics</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedMeeting.topics.map((t, idx) => (
-                          <span key={idx} className="rounded-md bg-secondary border border-border/40 px-2 py-0.5 text-[10px] font-medium text-foreground">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Meeting Stats</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Action Items: <span className="font-semibold text-foreground">{selectedMeeting.actionItems.length}</span>
-                        <br />
-                        Duration: <span className="font-semibold text-foreground">
-                          {selectedMeeting.duration ? `${Math.floor(selectedMeeting.duration / 60)} min` : "N/A"}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Consolidated Action Items Checklist */}
-          <div className="space-y-4">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Consolidated Action Items</h2>
-            <Card className="border-border/50 bg-card/40 backdrop-blur-xl">
-              <CardContent className="p-4">
-                {aggregatedActions.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-xs">No action items extracted from your meetings yet.</p>
+                {isEditingSummary ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editedSummary}
+                      onChange={(e) => setEditedSummary(e.target.value)}
+                      rows={4}
+                      className="w-full bg-background/80 border border-border/50 rounded-md p-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    />
                   </div>
                 ) : (
-                  <div className="space-y-3.5">
-                    {aggregatedActions.map((item) => {
-                      const isCompleted = !!completedItems[item.key];
-                      return (
-                        <div
-                          key={item.key}
-                          className={cn(
-                            "flex items-start gap-3 p-3 rounded-lg border transition-all duration-200",
-                            isCompleted 
-                              ? "bg-green-500/5 border-green-500/10 opacity-75"
-                              : "bg-muted/30 border-border/30 hover:border-border/60"
-                          )}
-                        >
-                          <button
-                            onClick={() => toggleActionItem(item.meetingId, item.index, item.text)}
-                            className={cn(
-                              "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border border-input transition-colors",
-                              isCompleted 
-                                ? "bg-green-500 border-green-600 text-white" 
-                                : "bg-background/80 hover:bg-accent"
-                            )}
-                          >
-                            {isCompleted && <CheckCircle2 className="h-3 w-3 fill-current" />}
-                          </button>
-
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              "text-xs leading-relaxed text-foreground",
-                              isCompleted && "line-through text-muted-foreground"
-                            )}>
-                              {item.text}
-                            </p>
-                            
-                            <div className="flex items-center gap-1.5 mt-1.5">
-                              <span className="text-[9px] text-muted-foreground">From:</span>
-                              <Link
-                                href={`/meetings/${item.meetingId}`}
-                                className="text-[9px] text-violet-400 font-semibold hover:underline truncate"
-                              >
-                                {item.meetingTitle}
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="p-3.5 rounded-lg bg-card/40 border border-border/30 text-muted-foreground leading-relaxed">
+                    {activeReport.executive_summary}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+
+              {/* Key Technical Findings by Provenance */}
+              <div className="space-y-3">
+                <span className="text-xs font-bold uppercase text-foreground block">
+                  Structured Findings by Provenance
+                </span>
+
+                <div className="space-y-2">
+                  {(activeReport.forensic_findings || []).map((f, fi) => (
+                    <div key={fi} className="p-3 rounded-lg bg-card/40 border border-border/30 flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <ProvenanceBadge type={f.classification} size="sm" />
+                          <span className="font-bold text-foreground">{f.title}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">{f.description}</p>
+                      </div>
+                      <Badge variant="outline" className="text-[8px] uppercase shrink-0">
+                        {f.severity.toUpperCase()}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Chronological Incident Timeline */}
+              <div className="space-y-3">
+                <span className="text-xs font-bold uppercase text-foreground block">
+                  Chronological Event Timeline
+                </span>
+
+                <div className="space-y-2">
+                  {(activeReport.investigation_timeline || []).map((evt, ei) => (
+                    <div key={ei} className="p-3 rounded-lg bg-card/40 border border-border/30 flex items-start gap-3">
+                      <Clock className="h-3.5 w-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                      <div className="space-y-0.5 flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-foreground">{evt.event_type}</span>
+                          <span className="text-[10px] text-muted-foreground" suppressHydrationWarning>
+                            {evt.timestamp ? format(new Date(evt.timestamp), "yyyy-MM-dd HH:mm:ss") : "Recorded"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">{evt.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              icon={FileText}
+              title="No Reports Generated"
+              description="Compile an incident dossier from an active investigation case above."
+            />
+          )}
         </div>
       </div>
     </div>

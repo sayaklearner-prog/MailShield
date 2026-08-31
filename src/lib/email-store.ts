@@ -1,30 +1,212 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type EmailCategory =
-  | "work"
-  | "recruiter"
-  | "newsletter"
-  | "personal"
-  | "finance"
-  | "academic"
-  | "promotional"
-  | "spam";
+export type SeverityLevel = "critical" | "high" | "medium" | "low" | "clean";
 
-export type UrgencyLevel = "critical" | "high" | "medium" | "low";
-export type ToneType = "professional" | "friendly" | "urgent" | "aggressive" | "neutral" | "suspicious";
+export type SignalCategory =
+  | "authentication"
+  | "identity"
+  | "routing"
+  | "url"
+  | "domain"
+  | "content"
+  | "attachment"
+  | "structure"
+  | "behavioral";
 
-export type EmailAnalysis = {
-  category: EmailCategory;
-  urgency: UrgencyLevel;
-  tone: ToneType;
+export type SignalSeverity = "critical" | "high" | "medium" | "low" | "info";
+
+export type ThreatClassification =
+  | "benign"
+  | "suspicious"
+  | "phishing"
+  | "spear_phishing"
+  | "credential_harvesting"
+  | "business_email_compromise"
+  | "impersonation"
+  | "malicious_link"
+  | "malicious_attachment"
+  | "spam"
+  | "unknown";
+
+export type TriageStatus =
+  | "unreviewed"
+  | "reviewing"
+  | "escalated"
+  | "resolved"
+  | "false_positive";
+
+export type AuthStatus =
+  | "pass"
+  | "fail"
+  | "softfail"
+  | "neutral"
+  | "none"
+  | "temperror"
+  | "permerror"
+  | "unknown";
+
+export type IndicatorType = "url" | "domain" | "ip" | "email" | "attachment";
+
+export type ThreatIndicator = {
+  indicatorType: IndicatorType;
+  value: string;
+  context?: string;
+  isMalicious: boolean;
+};
+
+export type EvidenceItem = {
+  fieldName: string;
+  rawValue: string;
+  description: string;
+  isAnomalous: boolean;
+};
+
+export type SecuritySignal = {
+  id: string;
+  type: string;
+  category: SignalCategory;
+  severity: SignalSeverity;
+  scoreContribution: number;
+  title: string;
+  description: string;
+  evidenceReferences: string[];
+  confidence: number;
+};
+
+export type StructuredReason = {
+  title: string;
+  explanation: string;
+  severity: SignalSeverity;
+  signalId?: string;
+  evidenceReferences: string[];
+  scoreContribution: number;
+};
+
+export type AIExplanation = {
   summary: string;
-  deadlines: string[];
-  actionItems: string[];
-  isPhishing: boolean;
-  phishingReason?: string;
-  importanceScore: number; // 1-10
-  draftReply?: string;
+  keyFindings: string[];
+  evidenceReferences: string[];
+  recommendedNextStep: string;
+  limitations: string;
+};
+
+export type ReceivedHop = {
+  sequence: number;
+  raw: string;
+  fromHost?: string;
+  fromIp?: string;
+  byHost?: string;
+  byIp?: string;
+  protocol?: string;
+  timestamp?: string;
+  hopId?: string;
+};
+
+export type AuthenticationResults = {
+  spf?: AuthStatus;
+  spfDetails?: string;
+  dkim?: AuthStatus;
+  dkimDetails?: string;
+  dmarc?: AuthStatus;
+  dmarcDetails?: string;
+  arc?: AuthStatus;
+  arcDetails?: string;
+  rawAuthResults?: string;
+};
+
+export type EmailArtifact = {
+  address: string;
+  displayName?: string;
+  domain: string;
+  role: string;
+  source: string;
+  evidenceReference: string;
+};
+
+export type URLArtifact = {
+  url: string;
+  normalizedUrl: string;
+  domain: string;
+  scheme: string;
+  path?: string;
+  query?: string;
+  source: string;
+  evidenceReference: string;
+};
+
+export type DomainArtifact = {
+  domain: string;
+  source: string;
+  evidenceReference: string;
+  occurrences: number;
+};
+
+export type IPArtifact = {
+  ipAddress: string;
+  ipVersion: string;
+  source: string;
+  context?: string;
+  evidenceReference: string;
+};
+
+export type AttachmentArtifact = {
+  filename: string;
+  contentType: string;
+  sizeBytes?: number;
+  attachmentId?: string;
+  sha256Hash?: string;
+  source: string;
+  evidenceReference: string;
+};
+
+export type MIMEInformation = {
+  contentType?: string;
+  mimeVersion?: string;
+  isMultipart: boolean;
+  hasHtml: boolean;
+  hasPlainText: boolean;
+  attachmentCount: number;
+  partsSummary: string[];
+};
+
+export type ForensicEmail = {
+  messageId?: string;
+  subject: string;
+  date?: string;
+  sender?: EmailArtifact;
+  recipients: EmailArtifact[];
+  replyTo?: EmailArtifact;
+  returnPath?: EmailArtifact;
+  headers: Array<{ name: string; value: string; isSecurityHeader?: boolean; raw?: string }>;
+  rawHeadersMap: Record<string, string[]>;
+  receivedChain: ReceivedHop[];
+  authentication: AuthenticationResults;
+  urls: URLArtifact[];
+  domains: DomainArtifact[];
+  ipAddresses: IPArtifact[];
+  emailAddresses: EmailArtifact[];
+  attachments: AttachmentArtifact[];
+  mimeInfo: MIMEInformation;
+  plainTextBody?: string;
+  htmlBody?: string;
+  extractedAt: string;
+};
+
+export type ThreatAnalysis = {
+  threatScore: number; // 0 - 100
+  severity: SeverityLevel;
+  classification: ThreatClassification;
+  confidence: number; // 0.0 - 1.0
+  summary: string;
+  reasons: string[];
+  structuredReasons?: StructuredReason[];
+  signals?: SecuritySignal[];
+  indicators: ThreatIndicator[];
+  evidence: EvidenceItem[];
+  aiExplanation?: AIExplanation;
+  triageStatus?: TriageStatus;
+  source: string;
   analyzedAt: string;
 };
 
@@ -35,100 +217,49 @@ export type EmailThread = {
   subject: string;
   preview: string;
   body: string;
+  htmlBody?: string;
   receivedAt: string;
   isRead: boolean;
   isStarred: boolean;
-  analysis?: EmailAnalysis;
-  // Agent workflow fields
-  agentProcessed?: boolean;
-  autoReplied?: boolean;
-  autoReplySentText?: string;
-  needsApproval?: boolean;
-  approvedAndSent?: boolean;
+  threatAnalysis?: ThreatAnalysis;
+  forensicData?: ForensicEmail;
+  triageStatus?: TriageStatus;
+  headers?: Record<string, string>;
+  rawHeadersList?: Array<{ name: string; value: string }>;
+  attachments?: AttachmentArtifact[];
+  source?: "GMAIL" | "EML" | "DEMO";
+  syncStatus?: "INGESTED" | "ANALYZING" | "ANALYZED" | "FAILED";
+  gmailMessageId?: string;
+  gmailThreadId?: string;
+  rawMime?: string;
 };
 
 type EmailStore = {
   emails: EmailThread[];
   geminiApiKey?: string;
   openaiApiKey?: string;
-  agentEnabled: boolean;
-  toggleAgent: () => void;
-  markAgentProcessed: (id: string, patches: Partial<EmailThread>) => void;
-  approveDraft: (id: string) => void;
-  dismissDraft: (id: string) => void;
   addEmail: (email: Omit<EmailThread, "id">) => EmailThread;
-  updateAnalysis: (id: string, analysis: EmailAnalysis) => void;
-  setDraftReply: (id: string, text: string) => void;
+  ingestBatchEmails: (newEmails: EmailThread[]) => { added: number; updated: number };
+  updateAnalysis: (id: string, analysis: ThreatAnalysis) => void;
+  updateForensics: (id: string, forensicData: ForensicEmail) => void;
+  updateTriageStatus: (id: string, status: TriageStatus) => void;
+  updateSyncStatus: (id: string, status: "INGESTED" | "ANALYZING" | "ANALYZED" | "FAILED") => void;
   toggleRead: (id: string) => void;
   toggleStar: (id: string) => void;
   deleteEmail: (id: string) => void;
+  clearEmails: () => void;
+  loadDemoEmails: () => void;
   setGeminiApiKey: (key: string) => void;
   setOpenaiApiKey: (key: string) => void;
 };
 
-const DEMO_EMAILS: EmailThread[] = [
+export const DEMO_SAMPLE_EMAILS: EmailThread[] = [
   {
-    id: "email-1",
-    from: "Dr. Sarah Chen",
-    fromEmail: "s.chen@university.edu",
-    subject: "Final Project Submission — Deadline Extended to Friday",
-    preview: "Good news! After reviewing the class progress, I've decided to extend the deadline for your final AI project...",
-    body: `Hi everyone,
-
-Good news! After reviewing the class progress and considering the complexity of the transformer architecture assignment, I've decided to extend the final project submission deadline.
-
-New deadline: This Friday, May 30th at 11:59 PM
-
-Requirements reminder:
-- Full implementation of the attention mechanism
-- Comparative analysis with at least 3 baseline models
-- 10-page report in NeurIPS format
-- Code submitted via GitHub with a README
-
-Please make sure your code runs end-to-end before submission. I'll be holding extra office hours on Thursday from 2-5 PM.
-
-Best,
-Dr. Chen`,
-    receivedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    isRead: false,
-    isStarred: true,
-  },
-  {
-    id: "email-2",
-    from: "Alex Rivera",
-    fromEmail: "alex.rivera@techstartup.io",
-    subject: "Exciting Senior ML Engineer Opportunity — $180K + Equity",
-    preview: "Hi! I came across your profile on LinkedIn and think you'd be a great fit for our Series B AI startup...",
-    body: `Hi,
-
-I came across your profile on LinkedIn and I'm genuinely impressed by your background in machine learning and distributed systems.
-
-We're a Series B AI startup (just raised $40M) building the next generation of LLM infrastructure. We're looking for a Senior ML Engineer to join our founding team.
-
-What we offer:
-- $160K-$180K base salary
-- 0.5-1.5% equity
-- Full remote flexibility
-- $5K learning stipend
-- Top-tier health benefits
-
-The role involves: model fine-tuning, inference optimization, and working directly with our CTO.
-
-Would you be open to a 20-minute intro call this week? I have slots available Thursday and Friday afternoon.
-
-Best,
-Alex Rivera
-Technical Recruiter | TechStartup.io`,
-    receivedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    isRead: false,
-    isStarred: false,
-  },
-  {
-    id: "email-3",
-    from: "Bank of America",
+    id: "demo-threat-email-1",
+    from: "Bank of America Security (DEMO)",
     fromEmail: "noreply@b0famerica-secure.net",
-    subject: "URGENT: Your account has been suspended — Verify NOW",
-    preview: "Your Bank of America account has been temporarily suspended due to suspicious activity. Click here immediately...",
+    subject: "[DEMO] URGENT: Your account has been suspended — Verify NOW",
+    preview: "Your Bank of America account has been temporarily suspended due to suspicious activity detected...",
     body: `Dear Valued Customer,
 
 Your Bank of America account has been temporarily suspended due to suspicious activity detected on your account.
@@ -136,147 +267,107 @@ Your Bank of America account has been temporarily suspended due to suspicious ac
 To restore access, you must verify your identity IMMEDIATELY by clicking the link below:
 
 >> VERIFY MY ACCOUNT NOW <<
-
-http://boa-secure-verify.malicious-domain.xyz/login
+http://b0famerica-secure.net/login/auth-check
 
 If you do not verify within 24 hours, your account will be permanently closed and funds may be seized.
 
-Bank of America Security Team`,
-    receivedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+Bank of America Security Operations Team
+Case ID: #SEC-98412`,
+    receivedAt: "2026-08-31T08:30:10Z",
     isRead: false,
-    isStarred: false,
-  },
-  {
-    id: "email-4",
-    from: "Marcus Thompson",
-    fromEmail: "m.thompson@company.com",
-    subject: "Q2 Sprint Review — Action Items for You",
-    preview: "Hey, great standup today! Just wanted to follow up on the action items from our Q2 sprint review...",
-    body: `Hey,
-
-Great standup today! Just wanted to follow up on the action items from our Q2 sprint review:
-
-Your action items:
-1. Refactor the data pipeline by June 3rd
-2. Write unit tests for the new recommendation engine
-3. Schedule a technical review with the platform team before EOW
-4. Update the architecture diagram in Confluence
-
-The client demo is scheduled for June 10th so we need everything polished by June 8th at the latest.
-
-Let me know if you have any blockers — happy to help.
-
-Cheers,
-Marcus`,
-    receivedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-    isStarred: false,
-  },
-  {
-    id: "email-5",
-    from: "The Batch — DeepLearning.AI",
-    fromEmail: "batch@deeplearning.ai",
-    subject: "The Batch: GPT-5 Released, Gemini Ultra 2 Benchmarks, and more",
-    preview: "This week in AI: OpenAI drops GPT-5 with unprecedented reasoning capabilities, Google's Gemini Ultra 2...",
-    body: `THE BATCH
-Weekly AI News from DeepLearning.AI
-
-This week's highlights:
-
-🔥 GPT-5 Released
-OpenAI announced GPT-5, boasting a 40% improvement on MMLU and near-human performance on the bar exam. Early access is now available for Plus subscribers.
-
-📊 Gemini Ultra 2 Benchmarks
-Google released benchmark results for Gemini Ultra 2, showing strong performance on multimodal reasoning tasks.
-
-🤖 Mistral 8x22B Open-Sourced
-Mistral AI released their largest open-source model, rivaling GPT-4 on many benchmarks.
-
-📚 Paper of the Week
-"Constitutional AI at Scale" — A new approach to aligning large language models using self-critique.
-
-Stay curious,
-The DeepLearning.AI Team`,
-    receivedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-    isStarred: false,
-  },
-  {
-    id: "email-6",
-    from: "Jordan Lee",
-    fromEmail: "jordan@friend.com",
-    subject: "Weekend plans? 🎉",
-    preview: "Hey! Are you free this weekend? A few of us are planning a hike on Saturday and dinner after...",
-    body: `Hey!
-
-Are you free this weekend? A few of us are planning a hike on Saturday morning (starts around 9 AM at Muir Woods) and then dinner at that new Italian place downtown.
-
-Let me know if you're in! We can carpool if needed.
-
-Also — did you finish that project you were stressing about last week? Hope it went well 🤞
-
-Talk soon,
-Jordan`,
-    receivedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-    isStarred: false,
+    isStarred: true,
+    triageStatus: "unreviewed",
+    source: "DEMO",
+    headers: {
+      "From": "Bank of America Security <noreply@b0famerica-secure.net>",
+      "Reply-To": "collector@malicious-redirect.xyz",
+      "Return-Path": "<bounce@spoofed-sender-relay.net>",
+      "Subject": "URGENT: Your account has been suspended — Verify NOW",
+      "Message-ID": "<20260831.98412@b0famerica-secure.net>",
+      "Authentication-Results": "mx.victim-corp.com; spf=fail; dkim=none; dmarc=fail action=quarantine header.from=b0famerica-secure.net",
+    },
+    rawHeadersList: [
+      { name: "From", value: "Bank of America Security <noreply@b0famerica-secure.net>" },
+      { name: "Reply-To", value: "collector@malicious-redirect.xyz" },
+      { name: "Subject", value: "URGENT: Your account has been suspended — Verify NOW" },
+    ],
+    attachments: [],
   },
 ];
 
 export const useEmailStore = create<EmailStore>()(
   persist(
     (set) => ({
-      emails: DEMO_EMAILS,
-
+      // Production Initial State MUST be clean and empty
+      emails: [],
       geminiApiKey: undefined,
       openaiApiKey: undefined,
-      agentEnabled: false,
-
-      toggleAgent: () => set((state) => ({ agentEnabled: !state.agentEnabled })),
-      
-      markAgentProcessed: (id, patches) => set((state) => ({
-        emails: state.emails.map((e) => e.id === id ? { ...e, ...patches, agentProcessed: true } : e)
-      })),
-
-      approveDraft: (id) => set((state) => ({
-        emails: state.emails.map((e) => e.id === id ? {
-          ...e,
-          needsApproval: false,
-          approvedAndSent: true,
-          isRead: true,
-          autoReplySentText: e.analysis?.draftReply || "Approved response sent.",
-        } : e)
-      })),
-
-      dismissDraft: (id) => set((state) => ({
-        emails: state.emails.map((e) => e.id === id ? {
-          ...e,
-          needsApproval: false,
-        } : e)
-      })),
 
       addEmail: (data) => {
-        const email: EmailThread = { ...data, id: crypto.randomUUID() };
+        const email: EmailThread = {
+          ...data,
+          id: data.gmailMessageId ? `gmail-${data.gmailMessageId}` : crypto.randomUUID(),
+          triageStatus: "unreviewed",
+          source: data.source || "EML",
+        };
         set((state) => ({ emails: [email, ...state.emails] }));
         return email;
       },
 
-      updateAnalysis: (id, analysis) =>
+      ingestBatchEmails: (newEmails) => {
+        let added = 0;
+        let updated = 0;
+
+        set((state) => {
+          const emailMap = new Map<string, EmailThread>();
+          // Index existing emails by gmailMessageId or internal id
+          for (const e of state.emails) {
+            const key = e.gmailMessageId || e.id;
+            emailMap.set(key, e);
+          }
+
+          for (const ne of newEmails) {
+            const key = ne.gmailMessageId || ne.id;
+            if (emailMap.has(key)) {
+              // Update existing record
+              emailMap.set(key, { ...emailMap.get(key)!, ...ne });
+              updated++;
+            } else {
+              // Insert new record
+              emailMap.set(key, ne);
+              added++;
+            }
+          }
+
+          return { emails: Array.from(emailMap.values()) };
+        });
+
+        return { added, updated };
+      },
+
+      updateSyncStatus: (id, syncStatus) =>
         set((state) => ({
-          emails: state.emails.map((e) => (e.id === id ? { ...e, analysis, isRead: true } : e)),
+          emails: state.emails.map((e) => (e.id === id ? { ...e, syncStatus } : e)),
         })),
 
-      setDraftReply: (id, text) =>
+      updateAnalysis: (id, threatAnalysis) =>
         set((state) => ({
           emails: state.emails.map((e) =>
-            e.id === id
-              ? {
-                  ...e,
-                  analysis: e.analysis
-                    ? { ...e.analysis, draftReply: text }
-                    : undefined,
-                }
-              : e
+            e.id === id ? { ...e, threatAnalysis, syncStatus: "ANALYZED", isRead: true } : e
+          ),
+        })),
+
+      updateForensics: (id, forensicData) =>
+        set((state) => ({
+          emails: state.emails.map((e) =>
+            e.id === id ? { ...e, forensicData } : e
+          ),
+        })),
+
+      updateTriageStatus: (id, triageStatus) =>
+        set((state) => ({
+          emails: state.emails.map((e) =>
+            e.id === id ? { ...e, triageStatus } : e
           ),
         })),
 
@@ -293,9 +384,13 @@ export const useEmailStore = create<EmailStore>()(
       deleteEmail: (id) =>
         set((state) => ({ emails: state.emails.filter((e) => e.id !== id) })),
 
+      clearEmails: () => set({ emails: [] }),
+
+      loadDemoEmails: () => set({ emails: DEMO_SAMPLE_EMAILS }),
+
       setGeminiApiKey: (key) => set({ geminiApiKey: key || undefined }),
       setOpenaiApiKey: (key) => set({ openaiApiKey: key || undefined }),
     }),
-    { name: "jerry-email-store" }
+    { name: "jerry-threat-store" }
   )
 );
