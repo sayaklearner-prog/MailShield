@@ -32,6 +32,7 @@ const googleClientSecret = (
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
+  debug: process.env.NODE_ENV !== "production" || true,
   secret:
     process.env.AUTH_SECRET ||
     process.env.NEXTAUTH_SECRET ||
@@ -52,36 +53,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, account, user }) {
-      if (account && account.access_token) {
-        token.accessToken = account.access_token;
-        token.refreshToken = account.refresh_token;
-        const email = (user?.email || token.email || "").toLowerCase();
-        if (email) {
-          serverTokenStore.set(email, {
-            accessToken: account.access_token,
-            refreshToken: account.refresh_token,
-            updatedAt: Date.now(),
-          });
+      try {
+        if (account && account.access_token) {
+          token.accessToken = account.access_token;
+          token.refreshToken = account.refresh_token;
+          const email = (user?.email || token.email || "").toLowerCase();
+          if (email) {
+            serverTokenStore.set(email, {
+              accessToken: account.access_token,
+              refreshToken: account.refresh_token,
+              updatedAt: Date.now(),
+            });
+          }
         }
+      } catch (err) {
+        console.error("NextAuth jwt callback error:", err);
       }
       return token;
     },
     async session({ session, token }) {
-      const email = (session.user?.email || (token.email as string) || "").toLowerCase();
-      if (email && token.accessToken) {
-        serverTokenStore.set(email, {
-          accessToken: token.accessToken as string,
-          refreshToken: token.refreshToken as string | undefined,
-          updatedAt: Date.now(),
-        });
+      try {
+        const email = (session.user?.email || (token.email as string) || "").toLowerCase();
+        if (email && token.accessToken) {
+          serverTokenStore.set(email, {
+            accessToken: token.accessToken as string,
+            refreshToken: token.refreshToken as string | undefined,
+            updatedAt: Date.now(),
+          });
+        }
+        return {
+          ...session,
+          isGmailConnected: Boolean(token.accessToken || (email && serverTokenStore.has(email))),
+        };
+      } catch (err) {
+        console.error("NextAuth session callback error:", err);
+        return session;
       }
-
-      // DO NOT put raw accessToken or refreshToken onto session
-      // Client only receives safe user info & connection flag
-      return {
-        ...session,
-        isGmailConnected: Boolean(token.accessToken || (email && serverTokenStore.has(email))),
-      };
     },
   },
 });
