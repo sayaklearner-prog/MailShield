@@ -160,6 +160,45 @@ export default function SettingsPage() {
     }
   };
 
+  const [directToken, setDirectToken] = useState("");
+  const [isConnectingToken, setIsConnectingToken] = useState(false);
+  const [redirectUriDetected, setRedirectUriDetected] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setRedirectUriDetected(`${window.location.origin}/api/auth/google/callback`);
+    }
+  }, []);
+
+  const handleDirectTokenConnect = async () => {
+    if (!directToken.trim()) {
+      toast.error("Please enter a Google OAuth access token.");
+      return;
+    }
+
+    setIsConnectingToken(true);
+    try {
+      const res = await fetch("/api/gmail/connect-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: directToken.trim() }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || "Connected Gmail successfully!");
+        setDirectToken("");
+        await fetchGmailStatus();
+      } else {
+        toast.error(data.message || "Failed to verify token with Google.");
+      }
+    } catch (e: any) {
+      toast.error("Connection error: " + e.message);
+    } finally {
+      setIsConnectingToken(false);
+    }
+  };
+
   const handleDisconnect = async () => {
     try {
       await fetch("/api/gmail/disconnect", { method: "POST" });
@@ -364,23 +403,84 @@ export default function SettingsPage() {
               </div>
             </div>
           ) : (
-            <div className="p-4 rounded-lg bg-card/60 border border-border/30 space-y-3">
-              <div className="space-y-1">
-                <span className="text-xs font-bold text-foreground">Connect Google Account</span>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Sign in with Google OAuth to grant read-only access (<code className="bg-background/80 px-1 py-0.5 rounded text-cyan-300">gmail.readonly</code>) to analyze emails for phishing, BEC, and impersonation.
-                </p>
+            <div className="space-y-4">
+              {/* Method A: Google OAuth */}
+              <div className="p-4 rounded-lg bg-card/60 border border-border/30 space-y-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                    <span className="text-xs font-bold text-foreground">Option 1: Standard Google OAuth (1-Click)</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Sign in with Google OAuth to grant read-only access (<code className="bg-background/80 px-1 py-0.5 rounded text-cyan-300">gmail.readonly</code>) to analyze emails for phishing and threats.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    onClick={() => {
+                      window.location.href = "/api/auth/google/login";
+                    }}
+                    className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs gap-1.5 shadow-md shadow-cyan-600/20 font-mono h-8"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    Connect Gmail via Google OAuth
+                  </Button>
+
+                  {redirectUriDetected && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(redirectUriDetected);
+                        toast.success("Copied exact Redirect URI to clipboard!");
+                      }}
+                      className="h-8 text-[11px] font-mono gap-1.5 border-border/40 text-muted-foreground hover:text-foreground"
+                    >
+                      <Copy className="h-3 w-3" />
+                      Copy Google Cloud Redirect URI
+                    </Button>
+                  )}
+                </div>
+
+                {redirectUriDetected && (
+                  <div className="p-2.5 rounded bg-background/50 border border-border/20 text-[10px] font-mono text-muted-foreground">
+                    <span className="text-cyan-400 font-bold">Required in Google Cloud Console: </span>
+                    <span className="select-all text-foreground">{redirectUriDetected}</span>
+                  </div>
+                )}
               </div>
 
-              <Button
-                onClick={() => {
-                  window.location.href = "/api/auth/google/login";
-                }}
-                className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs gap-1.5 shadow-md shadow-cyan-600/20 font-mono h-8"
-              >
-                <Mail className="h-3.5 w-3.5" />
-                Connect Gmail Account via Google OAuth
-              </Button>
+              {/* Method B: Direct Token Connector */}
+              <div className="p-4 rounded-lg bg-card/60 border border-border/30 space-y-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+                    <span className="text-xs font-bold text-foreground">Option 2: Direct Token Connection (Instant Bypass)</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    If Google OAuth redirect is pending propagation, paste a Google OAuth Access Token (from Google Cloud / OAuth Playground) for instant mailbox verification.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <Input
+                    type="password"
+                    placeholder="ya29.a0AcM612..."
+                    value={directToken}
+                    onChange={(e) => setDirectToken(e.target.value)}
+                    className="h-8 text-xs bg-background/80 border-border/40 font-mono"
+                  />
+                  <Button
+                    onClick={handleDirectTokenConnect}
+                    disabled={isConnectingToken || !directToken.trim()}
+                    className="h-8 bg-purple-600 hover:bg-purple-500 text-white text-xs font-mono gap-1.5 shrink-0"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {isConnectingToken ? "Verifying..." : "Verify & Connect Mailbox"}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
