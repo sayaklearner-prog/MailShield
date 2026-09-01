@@ -18,9 +18,16 @@ export function clearServerOAuthToken(email: string): void {
   serverTokenStore.delete(email.toLowerCase());
 }
 
+if (!process.env.AUTH_SECRET) {
+  process.env.AUTH_SECRET =
+    process.env.NEXTAUTH_SECRET ||
+    "jerry-security-intelligence-auth-secret-32-chars-key-2026";
+}
+
 const googleClientId = (
   process.env.GOOGLE_CLIENT_ID ||
   process.env.AUTH_GOOGLE_ID ||
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
   ""
 ).trim().replace(/^["']|["']$/g, "");
 
@@ -32,11 +39,14 @@ const googleClientSecret = (
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
-  debug: process.env.NODE_ENV !== "production" || true,
+  debug: true,
   secret:
     process.env.AUTH_SECRET ||
     process.env.NEXTAUTH_SECRET ||
     "jerry-security-intelligence-auth-secret-32-chars-key-2026",
+  pages: {
+    error: "/auth/error",
+  },
   providers: [
     Google({
       clientId: googleClientId,
