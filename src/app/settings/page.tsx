@@ -373,7 +373,9 @@ export default function SettingsPage() {
               </div>
 
               <Button
-                onClick={() => signIn("google")}
+                onClick={() => {
+                  window.location.href = "/api/auth/google/login";
+                }}
                 className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs gap-1.5 shadow-md shadow-cyan-600/20 font-mono h-8"
               >
                 <Mail className="h-3.5 w-3.5" />

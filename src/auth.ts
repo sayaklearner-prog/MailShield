@@ -13,6 +13,15 @@ export function getServerOAuthToken(email: string): string | null {
   return entry ? entry.accessToken : null;
 }
 
+export function setServerOAuthToken(email: string, accessToken: string, refreshToken?: string): void {
+  if (!email || !accessToken) return;
+  serverTokenStore.set(email.toLowerCase(), {
+    accessToken,
+    refreshToken,
+    updatedAt: Date.now(),
+  });
+}
+
 export function clearServerOAuthToken(email: string): void {
   if (!email) return;
   serverTokenStore.delete(email.toLowerCase());

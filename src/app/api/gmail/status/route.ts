@@ -4,9 +4,23 @@ import { verifyGmailMailbox } from "@/lib/gmail";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
-    const userEmail = session?.user?.email || null;
-    const userName = session?.user?.name || null;
+    let session = await auth();
+    let userEmail = session?.user?.email || null;
+    let userName = session?.user?.name || null;
+    let accessToken: string | null = null;
+
+    // Check custom session cookie fallback
+    const customCookie = req.cookies.get("mailshield_session")?.value;
+    if (customCookie) {
+      try {
+        const parsed = JSON.parse(customCookie);
+        if (parsed.email && parsed.accessToken) {
+          userEmail = parsed.email;
+          userName = parsed.name || userEmail;
+          accessToken = parsed.accessToken;
+        }
+      } catch {}
+    }
 
     if (!userEmail) {
       return NextResponse.json({
@@ -21,7 +35,9 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const accessToken = getServerOAuthToken(userEmail);
+    if (!accessToken) {
+      accessToken = getServerOAuthToken(userEmail);
+    }
 
     if (!accessToken) {
       return NextResponse.json({

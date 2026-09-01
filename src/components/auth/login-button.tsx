@@ -48,7 +48,9 @@ export function LoginButton() {
     <Button
       variant="outline"
       className="w-full justify-start gap-2 bg-gradient-to-b from-card to-muted/50 transition-all hover:border-primary/50 hover:shadow-sm"
-      onClick={() => signIn("google")}
+      onClick={() => {
+        window.location.href = "/api/auth/google/login";
+      }}
     >
       <svg className="h-4 w-4" viewBox="0 0 24 24">
         <path
