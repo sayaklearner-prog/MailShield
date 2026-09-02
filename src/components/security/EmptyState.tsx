@@ -2,6 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { LucideIcon, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 interface EmptyStateProps {
   icon?: LucideIcon;
@@ -21,9 +22,12 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
       className={cn(
-        "p-8 rounded-xl border border-dashed border-border/60 bg-card/30 backdrop-blur-sm text-center flex flex-col items-center justify-center space-y-3 select-none",
+        "surface-1 p-8 rounded-xl border border-dashed border-border/60 bg-card/30 backdrop-blur-sm text-center flex flex-col items-center justify-center space-y-3 select-none",
         className
       )}
     >
@@ -43,6 +47,6 @@ export function EmptyState({
           {actionLabel}
         </Button>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -14,7 +14,7 @@ from backend.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-URL_AI_SYSTEM_PROMPT = """You are the AI URL Threat Analysis Engine for Jerry Security Intelligence.
+URL_AI_SYSTEM_PROMPT = """You are the AI URL Threat Analysis Engine for MailShield Security Intelligence.
 Your role is to explain the DETERMINISTIC URL EVIDENCE collected by the security scanner.
 
 CRITICAL NON-NEGOTIABLE PRINCIPLES:

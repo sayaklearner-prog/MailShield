@@ -263,6 +263,6 @@ export const useIntelligenceStore = create<IntelligenceStore>()(
         }
       },
     }),
-    { name: "jerry-intelligence-store" }
+    { name: "mailshield-intelligence-store" }
   )
 );

@@ -1,6 +1,6 @@
-# Jerry Security Intelligence — Hackathon Demonstration Script (SIH)
+# MailShield Security Intelligence — Hackathon Demonstration Script (SIH)
 
-This document provides the step-by-step judge and reviewer demonstration workflow for **Jerry Security Intelligence: AI-Powered Email Threat Detection, Geolocation & Forensic Intelligence Platform**.
+This document provides the step-by-step judge and reviewer demonstration workflow for **MailShield Security Intelligence: AI-Powered Email Threat Detection, Geolocation & Forensic Intelligence Platform**.
 
 ---
 
@@ -41,10 +41,10 @@ This document provides the step-by-step judge and reviewer demonstration workflo
 ## Key Talking Points for Judges
 
 1. **Deterministic Core vs AI Interpretation**:
-   * "Jerry is not just an LLM wrapper. The security decisions (0–100 Threat Score, Severity, Security Signals) are calculated by a deterministic rule engine running locally. AI is strictly the interpretation layer."
+   * "MailShield is not just an LLM wrapper. The security decisions (0–100 Threat Score, Severity, Security Signals) are calculated by a deterministic rule engine running locally. AI is strictly the interpretation layer."
 2. **Correlation $\neq$ Attribution**:
-   * "Jerry correlates shared infrastructure across emails without manufacturing false attribution claims or falsely declaring physical attacker locations."
+   * "MailShield correlates shared infrastructure across emails without manufacturing false attribution claims or falsely declaring physical attacker locations."
 3. **Forensic Integrity & Auditability**:
    * "Every report finding has explicit evidence provenance (`OBSERVED`, `DERIVED`, `EXTERNAL_INTELLIGENCE`, `AI_INTERPRETATION`, `ANALYST_NOTE`) and a cryptographic SHA-256 integrity stamp."
 4. **Passive Security Boundary**:
-   * "Jerry is 100% passive: zero active port scanning, no malicious payload detonation, no unauthorized automated actions."
+   * "MailShield is 100% passive: zero active port scanning, no malicious payload detonation, no unauthorized automated actions."

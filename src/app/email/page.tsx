@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   useEmailStore,
   EmailThread,
@@ -231,7 +232,7 @@ export default function ForensicEmailWorkspace() {
   return (
     <div className="flex h-[calc(100vh-2rem)] gap-4 p-4 max-w-7xl mx-auto">
       {/* LEFT COLUMN: Triage List (w-96) */}
-      <div className="w-96 flex flex-col gap-3 shrink-0">
+      <div className="w-96 flex flex-col gap-3 shrink-0 surface-1">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-base font-extrabold tracking-tight text-foreground flex items-center gap-2">
@@ -262,7 +263,12 @@ export default function ForensicEmailWorkspace() {
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+        <motion.div 
+          className="flex-1 overflow-y-auto space-y-2 pr-1"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
+          initial="hidden"
+          animate="show"
+        >
           {filteredEmails.map((email) => {
             const isSelected = email.id === selectedEmailId;
             const score = email.threatAnalysis?.threatScore;
@@ -271,8 +277,9 @@ export default function ForensicEmailWorkspace() {
             const source = email.source || "EML";
 
             return (
-              <div
+              <motion.div
                 key={email.id}
+                variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
                 onClick={() => setSelectedEmailId(email.id)}
                 className={cn(
                   "p-3 rounded-lg border text-left cursor-pointer transition-all space-y-1.5",
@@ -327,14 +334,14 @@ export default function ForensicEmailWorkspace() {
                     {status.replace("_", " ")}
                   </span>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
 
       {/* RIGHT COLUMN: Forensic Investigation & Threat Scoring Workspace */}
-      <div className="flex-1 flex flex-col min-w-0 border border-border/50 rounded-xl bg-card/30 backdrop-blur-xl overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 border border-border/50 rounded-xl bg-card/30 backdrop-blur-xl overflow-hidden surface-2">
         {selectedEmail ? (
           <div className="flex flex-col h-full">
             {/* Workspace Header: Threat Banner */}
@@ -402,25 +409,29 @@ export default function ForensicEmailWorkspace() {
                     <option value="false_positive">Status: False Positive</option>
                   </select>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setSelectedTab("investigation")}
-                    className="h-8 border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-mono gap-1.5"
-                  >
-                    <Sparkles className="h-3.5 w-3.5 text-purple-400" />
-                    Investigate Threat
-                  </Button>
+                  <motion.div whileTap={{ scale: 0.97 }}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedTab("investigation")}
+                      className="h-8 border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-mono gap-1.5"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                      Investigate Threat
+                    </Button>
+                  </motion.div>
 
-                  <Button
-                    size="sm"
-                    onClick={() => handleRunAnalysis(selectedEmail)}
-                    disabled={isAnalyzing}
-                    className="h-8 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono gap-1.5 shadow-md shadow-cyan-600/20"
-                  >
-                    <RefreshCw className={cn("h-3.5 w-3.5", isAnalyzing && "animate-spin")} />
-                    {selectedEmail.threatAnalysis ? "Re-Evaluate" : "Analyze Threat"}
-                  </Button>
+                  <motion.div whileTap={{ scale: 0.97 }}>
+                    <Button
+                      size="sm"
+                      onClick={() => handleRunAnalysis(selectedEmail)}
+                      disabled={isAnalyzing}
+                      className="h-8 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono gap-1.5 shadow-md shadow-cyan-600/20"
+                    >
+                      <RefreshCw className={cn("h-3.5 w-3.5", isAnalyzing && "animate-spin")} />
+                      {selectedEmail.threatAnalysis ? "Re-Evaluate" : "Analyze Threat"}
+                    </Button>
+                  </motion.div>
                 </div>
               </div>
             </div>
@@ -459,6 +470,15 @@ export default function ForensicEmailWorkspace() {
 
             {/* Tab Contents Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={selectedTab}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-4"
+                >
               {/* TAB: Investigation Deep Dive */}
               {selectedTab === "investigation" && (
                 <EmailInvestigationDeepDive email={selectedEmail} forensicData={forensicData} />
@@ -1004,6 +1024,8 @@ export default function ForensicEmailWorkspace() {
                   </Card>
                 </div>
               )}
+              </motion.div>
+              </AnimatePresence>
             </div>
           </div>
         ) : (

@@ -1,8 +1,8 @@
-# Jerry Security Intelligence — Architecture Documentation
+# MailShield Security Intelligence — Architecture Documentation
 
 ## 1. System Overview
 
-**Jerry Security Intelligence** is an AI-powered email threat detection, geolocation, and forensic intelligence platform designed for Security Operations Center (SOC) analysts, incident responders, and organizations requiring deep email forensic triage.
+**MailShield Security Intelligence** is an AI-powered email threat detection, geolocation, and forensic intelligence platform designed for Security Operations Center (SOC) analysts, incident responders, and organizations requiring deep email forensic triage.
 
 ---
 

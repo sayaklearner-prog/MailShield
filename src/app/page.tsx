@@ -109,30 +109,45 @@ export default function SecurityDashboard() {
 
         <div className="flex items-center gap-2.5 shrink-0">
           <Link href="/investigations">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs font-mono gap-1.5 border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground"
-            >
-              <Network className="h-3.5 w-3.5 text-cyan-400" />
-              Investigation Graph
-            </Button>
+            <motion.div whileTap={{ scale: 0.97 }}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs font-mono gap-1.5 border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground"
+              >
+                <Network className="h-3.5 w-3.5 text-cyan-400" />
+                Investigation Graph
+              </Button>
+            </motion.div>
           </Link>
           <Link href="/email">
-            <Button
-              size="sm"
-              className="bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs gap-1.5 shadow-md shadow-cyan-600/20"
-            >
-              <Mail className="h-3.5 w-3.5" />
-              Triage Workspace
-            </Button>
+            <motion.div whileTap={{ scale: 0.97 }}>
+              <Button
+                size="sm"
+                className="bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs gap-1.5 shadow-md shadow-cyan-600/20"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                Triage Workspace
+              </Button>
+            </motion.div>
           </Link>
         </div>
       </motion.div>
 
       {/* Primary Telemetry Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+      <motion.div 
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+        variants={{
+          hidden: { opacity: 0 },
+          show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.06 }
+          }
+        }}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={{ hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } }} className="hover-lift">
           <SecurityMetricCard
             title="Ingested Emails"
             value={totalEmails}
@@ -143,7 +158,7 @@ export default function SecurityDashboard() {
           />
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div variants={{ hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } }} className="hover-lift">
           <SecurityMetricCard
             title="Threats Isolated"
             value={threatsDetected}
@@ -154,7 +169,7 @@ export default function SecurityDashboard() {
           />
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <motion.div variants={{ hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } }} className="hover-lift">
           <SecurityMetricCard
             title="High / Critical Risk"
             value={criticalThreats}
@@ -165,7 +180,7 @@ export default function SecurityDashboard() {
           />
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div variants={{ hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } }} className="hover-lift">
           <SecurityMetricCard
             title="Pending Triage"
             value={pendingTriage}
@@ -175,7 +190,7 @@ export default function SecurityDashboard() {
             badgeText="QUEUE"
           />
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* Main Command Console Grid */}
       <div className="grid gap-6 lg:grid-cols-12 items-start">
@@ -218,7 +233,7 @@ export default function SecurityDashboard() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.05 }}
                   >
-                    <Card className="border-border/40 bg-card/50 hover:bg-card/80 transition-all hover:border-cyan-500/30">
+                    <Card className="border-border/40 bg-card/50 hover:bg-card/80 transition-all hover:border-cyan-500/30 surface-2 hover-lift">
                       <CardContent className="p-3.5 lg:p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex-1 min-w-0 space-y-1">
@@ -269,30 +284,34 @@ export default function SecurityDashboard() {
 
                           <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                             {!isAnalyzed ? (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="text-xs h-7 font-mono gap-1"
-                                disabled={analyzingId === email.id}
-                                onClick={() => handleQuickAnalyze(email)}
-                              >
-                                {analyzingId === email.id ? (
-                                  <>
-                                    <Loader2 className="h-3 w-3 animate-spin text-cyan-400" />
-                                    Triage...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Sparkles className="h-3 w-3 text-cyan-400" />
-                                    Analyze
-                                  </>
-                                )}
-                              </Button>
+                              <motion.div whileTap={{ scale: 0.97 }}>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="text-xs h-7 font-mono gap-1"
+                                  disabled={analyzingId === email.id}
+                                  onClick={() => handleQuickAnalyze(email)}
+                                >
+                                  {analyzingId === email.id ? (
+                                    <>
+                                      <Loader2 className="h-3 w-3 animate-spin text-cyan-400" />
+                                      Triage...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Sparkles className="h-3 w-3 text-cyan-400" />
+                                      Analyze
+                                    </>
+                                  )}
+                                </Button>
+                              </motion.div>
                             ) : (
                               <Link href="/email">
-                                <Button size="sm" variant="outline" className="text-xs h-7 font-mono gap-1 text-muted-foreground hover:text-foreground">
-                                  Inspect <ArrowRight className="h-3 w-3" />
-                                </Button>
+                                <motion.div whileTap={{ scale: 0.97 }}>
+                                  <Button size="sm" variant="outline" className="text-xs h-7 font-mono gap-1 text-muted-foreground hover:text-foreground">
+                                    Inspect <ArrowRight className="h-3 w-3" />
+                                  </Button>
+                                </motion.div>
                               </Link>
                             )}
                           </div>
@@ -315,7 +334,7 @@ export default function SecurityDashboard() {
             badgeVariant="cyan"
           />
 
-          <Card className="border-border/50 bg-card/50 backdrop-blur-xl">
+          <Card className="border-border/50 bg-card/50 backdrop-blur-xl surface-1">
             <CardContent className="p-4 space-y-3 text-xs">
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-background/60 border border-border/30">
                 <div className="flex items-center gap-2">
@@ -354,7 +373,7 @@ export default function SecurityDashboard() {
           </Card>
 
           {/* Quick Investigation Launch */}
-          <Card className="border-border/50 bg-card/50 backdrop-blur-xl">
+          <Card className="border-border/50 bg-card/50 backdrop-blur-xl surface-2 border-l-2 border-l-cyan-500/40">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <Network className="h-3.5 w-3.5 text-cyan-400" />
@@ -372,9 +391,11 @@ export default function SecurityDashboard() {
               </div>
 
               <Link href="/investigations" className="block pt-1">
-                <Button variant="outline" className="w-full text-xs font-mono h-8 gap-1.5 border-border/60 hover:border-cyan-500/40">
-                  Open Investigation Console <ArrowRight className="h-3 w-3 text-cyan-400" />
-                </Button>
+                <motion.div whileTap={{ scale: 0.97 }}>
+                  <Button variant="outline" className="w-full text-xs font-mono h-8 gap-1.5 border-border/60 hover:border-cyan-500/40">
+                    Open Investigation Console <ArrowRight className="h-3 w-3 text-cyan-400" />
+                  </Button>
+                </motion.div>
               </Link>
             </CardContent>
           </Card>

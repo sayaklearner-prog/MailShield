@@ -182,7 +182,7 @@ class URLIntelligenceService:
             correlation_engine.ingest_email({
                 "id": request.email_id or f"url-investigation-{url_id}",
                 "subject": f"URL Threat Investigation: {structural_details.hostname}",
-                "fromEmail": "url-scanner@jerry.security",
+                "fromEmail": "url-scanner@mailshield.security",
                 "receivedAt": datetime.now(timezone.utc).isoformat(),
                 "threatAnalysis": {
                     "threatScore": threat_score or 0,

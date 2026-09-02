@@ -198,6 +198,6 @@ export const useURLIntelligenceStore = create<URLIntelligenceStore>()(
         }
       },
     }),
-    { name: "jerry-url-intelligence-store" }
+    { name: "mailshield-url-intelligence-store" }
   )
 );

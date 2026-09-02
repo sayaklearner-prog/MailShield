@@ -81,6 +81,39 @@
   --sidebar-accent-foreground: oklch(0.99 0 0);
   --sidebar-border: oklch(0.22 0.02 260 / 45%);
   --sidebar-ring: oklch(0.68 0.16 220);
+
+  /* ── Elevation Surface Tiers ── */
+  --surface-1: oklch(0.13 0.015 260);
+  --surface-2: oklch(0.15 0.015 260);
+  --surface-3: oklch(0.17 0.018 260);
+  --surface-4: oklch(0.19 0.02 260);
+  --surface-5: oklch(0.22 0.025 260);
+
+  /* ── Multi-layer Shadows ── */
+  --shadow-elevation-1: 0 1px 2px oklch(0 0 0 / 20%), 0 1px 3px oklch(0 0 0 / 12%);
+  --shadow-elevation-2: 0 2px 4px oklch(0 0 0 / 22%), 0 4px 8px oklch(0 0 0 / 14%);
+  --shadow-elevation-3: 0 4px 8px oklch(0 0 0 / 24%), 0 8px 16px oklch(0 0 0 / 16%), 0 1px 3px oklch(0 0 0 / 10%);
+  --shadow-elevation-4: 0 8px 16px oklch(0 0 0 / 28%), 0 16px 32px oklch(0 0 0 / 18%), 0 2px 4px oklch(0 0 0 / 12%);
+  --shadow-elevation-5: 0 12px 24px oklch(0 0 0 / 32%), 0 24px 48px oklch(0 0 0 / 20%), 0 4px 8px oklch(0 0 0 / 14%);
+
+  /* ── Status Glow Borders ── */
+  --glow-cyan: 0 0 8px oklch(0.72 0.17 200 / 25%), 0 0 2px oklch(0.72 0.17 200 / 40%);
+  --glow-violet: 0 0 8px oklch(0.65 0.20 290 / 25%), 0 0 2px oklch(0.65 0.20 290 / 40%);
+  --glow-amber: 0 0 8px oklch(0.75 0.18 75 / 25%), 0 0 2px oklch(0.75 0.18 75 / 40%);
+  --glow-red: 0 0 8px oklch(0.62 0.24 25 / 25%), 0 0 2px oklch(0.62 0.24 25 / 40%);
+  --glow-emerald: 0 0 8px oklch(0.72 0.17 160 / 25%), 0 0 2px oklch(0.72 0.17 160 / 40%);
+
+  /* ── Inner Light-catch Border ── */
+  --inner-border: inset 0 1px 0 oklch(1 0 0 / 6%), inset 0 0 0 1px oklch(1 0 0 / 3%);
+
+  /* ── Motion Timing ── */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-entrance: 600ms;
 }
 
 .dark {
@@ -142,5 +175,93 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: oklch(0.38 0.03 260);
+  }
+}
+
+/* ── Surface Elevation Utility Classes ── */
+.surface-1 {
+  background: var(--surface-1);
+  box-shadow: var(--shadow-elevation-1), var(--inner-border);
+  border: 1px solid oklch(1 0 0 / 4%);
+}
+.surface-2 {
+  background: var(--surface-2);
+  box-shadow: var(--shadow-elevation-2), var(--inner-border);
+  border: 1px solid oklch(1 0 0 / 5%);
+}
+.surface-3 {
+  background: var(--surface-3);
+  box-shadow: var(--shadow-elevation-3), var(--inner-border);
+  border: 1px solid oklch(1 0 0 / 6%);
+}
+.surface-4 {
+  background: var(--surface-4);
+  box-shadow: var(--shadow-elevation-4), var(--inner-border);
+  border: 1px solid oklch(1 0 0 / 7%);
+}
+.surface-5 {
+  background: var(--surface-5);
+  box-shadow: var(--shadow-elevation-5), var(--inner-border);
+  border: 1px solid oklch(1 0 0 / 8%);
+}
+
+/* ── Hover Lift ── */
+.hover-lift {
+  transition: transform var(--duration-normal) var(--ease-spring),
+              box-shadow var(--duration-normal) var(--ease-smooth);
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevation-3), var(--inner-border);
+}
+
+/* ── Glass Panel (floating UI only: modals, toasts, copilot) ── */
+.glass-panel {
+  background: oklch(0.14 0.015 260 / 70%);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid oklch(1 0 0 / 8%);
+  box-shadow: var(--shadow-elevation-4), var(--inner-border);
+}
+
+/* ── Glow Pulse Keyframes ── */
+@keyframes glow-pulse-cyan {
+  0%, 100% { box-shadow: var(--shadow-elevation-2); }
+  50% { box-shadow: var(--glow-cyan), var(--shadow-elevation-2); }
+}
+@keyframes glow-pulse-red {
+  0%, 100% { box-shadow: var(--shadow-elevation-2); }
+  50% { box-shadow: var(--glow-red), var(--shadow-elevation-2); }
+}
+@keyframes glow-pulse-amber {
+  0%, 100% { box-shadow: var(--shadow-elevation-2); }
+  50% { box-shadow: var(--glow-amber), var(--shadow-elevation-2); }
+}
+.glow-pulse-cyan {
+  animation: glow-pulse-cyan 1.5s ease-in-out 2;
+}
+.glow-pulse-red {
+  animation: glow-pulse-red 1.5s ease-in-out 2;
+}
+.glow-pulse-amber {
+  animation: glow-pulse-amber 1.5s ease-in-out 2;
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .hover-lift:hover {
+    transform: none;
+  }
+  .glow-pulse-cyan,
+  .glow-pulse-red,
+  .glow-pulse-amber {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

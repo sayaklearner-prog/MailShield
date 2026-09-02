@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { AuthProvider } from "@/components/auth/providers";
 
 export const metadata: Metadata = {
-  title: "Jerry Security Intelligence | Threat Detection & Forensic Intelligence",
+  title: "MailShield Security Intelligence | Threat Detection & Forensic Intelligence",
   description: "AI-Powered Email Threat Detection, Geolocation & Forensic Intelligence Platform",
 };
 

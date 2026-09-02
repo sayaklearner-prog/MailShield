@@ -204,6 +204,6 @@ export const useNetworkStore = create<NetworkStore>()(
         }
       },
     }),
-    { name: "jerry-network-store" }
+    { name: "mailshield-network-store" }
   )
 );

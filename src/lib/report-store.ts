@@ -329,6 +329,6 @@ export const useReportStore = create<ReportStore>()(
 
       setActiveReportId: (id) => set({ activeReportId: id }),
     }),
-    { name: "jerry-report-store" }
+    { name: "mailshield-report-store" }
   )
 );

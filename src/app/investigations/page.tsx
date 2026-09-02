@@ -9,6 +9,7 @@ import {
   InvestigationCase,
 } from "@/lib/correlation-store";
 import { useReportStore } from "@/lib/report-store";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,34 +234,40 @@ export default function SOCInvestigationCommandCenter() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          <Button
-            size="sm"
-            onClick={() => setShowNewCaseModal(true)}
-            className="h-8 text-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-1.5 shadow-sm font-mono"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Case
-          </Button>
+          <motion.div whileTap={{ scale: 0.97 }}>
+            <Button
+              size="sm"
+              onClick={() => setShowNewCaseModal(true)}
+              className="h-8 text-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-1.5 shadow-sm font-mono"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Case
+            </Button>
+          </motion.div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGenerateReportHandoff}
-            className="h-8 text-xs font-mono gap-1.5 border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground"
-          >
-            <FileText className="h-3.5 w-3.5 text-cyan-400" />
-            Generate Report
-          </Button>
+          <motion.div whileTap={{ scale: 0.97 }}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGenerateReportHandoff}
+              className="h-8 text-xs font-mono gap-1.5 border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground"
+            >
+              <FileText className="h-3.5 w-3.5 text-cyan-400" />
+              Generate Report
+            </Button>
+          </motion.div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleExportJSONHandoff}
-            className="h-8 text-xs font-mono gap-1.5 border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground"
-          >
-            <Download className="h-3.5 w-3.5 text-purple-400" />
-            Export JSON
-          </Button>
+          <motion.div whileTap={{ scale: 0.97 }}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleExportJSONHandoff}
+              className="h-8 text-xs font-mono gap-1.5 border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground"
+            >
+              <Download className="h-3.5 w-3.5 text-purple-400" />
+              Export JSON
+            </Button>
+          </motion.div>
         </div>
       </div>
 
@@ -288,21 +295,27 @@ export default function SOCInvestigationCommandCenter() {
       {/* MAIN WORKSPACE BODY: Case List + Multi-Tab Console */}
       <div className="flex-1 flex gap-4 min-h-0">
         {/* LEFT COLUMN: Case Queue */}
-        <div className="w-72 flex flex-col gap-2 shrink-0 overflow-y-auto">
+        <motion.div 
+          className="w-72 flex flex-col gap-2 shrink-0 overflow-y-auto"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+          initial="hidden"
+          animate="show"
+        >
           <span className="text-[10px] font-mono uppercase font-bold text-muted-foreground px-1">
             Active Cases ({investigations.length})
           </span>
           {investigations.map((c) => {
             const isSelected = c.id === activeCaseId;
             return (
-              <div
+              <motion.div
                 key={c.id}
+                variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
                 onClick={() => {
                   setActiveCaseId(c.id);
                   fetchGraph(c.root_entity_id, traversalDepth);
                 }}
                 className={cn(
-                  "p-3 rounded-lg border text-left cursor-pointer transition-all space-y-1.5",
+                  "p-3 rounded-lg border text-left cursor-pointer transition-all space-y-1.5 surface-1",
                   isSelected
                     ? "bg-[#141824] border-cyan-500/50 shadow-sm ring-1 ring-cyan-500/20"
                     : "bg-card/40 border-border/40 hover:bg-card/70"
@@ -317,13 +330,13 @@ export default function SOCInvestigationCommandCenter() {
                   <span>{c.related_email_ids.length} Emails</span>
                   <span suppressHydrationWarning>{format(new Date(c.updated_at), "MMM d")}</span>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* CENTER CONSOLE: Tabs for Overview, Graph, Timeline, Copilot */}
-        <div className="flex-1 flex flex-col border border-border/50 rounded-xl bg-card/30 backdrop-blur-xl overflow-hidden min-w-0">
+        <div className="flex-1 flex flex-col border border-border/50 rounded-xl bg-card/30 backdrop-blur-xl overflow-hidden min-w-0 surface-2">
           {/* Navigation Tab Bar */}
           <div className="px-4 py-2 border-b border-border/40 bg-card/60 flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-1 font-mono text-xs">
@@ -585,7 +598,7 @@ export default function SOCInvestigationCommandCenter() {
 
               {/* Copilot Response Panel */}
               {copilotResponse ? (
-                <div className="p-4 rounded-lg bg-card/60 border border-border/40 space-y-3 font-mono">
+                <div className="p-4 rounded-lg bg-card/60 border border-border/40 space-y-3 font-mono glass-panel">
                   <div className="flex items-center justify-between border-b border-border/30 pb-2">
                     <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <Sparkles className="h-3.5 w-3.5 text-purple-400" />

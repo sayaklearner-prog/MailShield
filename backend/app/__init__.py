@@ -1,1 +1,1 @@
-"""Jerry Security Intelligence Backend Package."""
+"""MailShield Security Intelligence Backend Package."""

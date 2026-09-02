@@ -93,7 +93,7 @@ class GoogleGeminiClient:
         api_key: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Generate evidence-grounded threat intelligence narrative using Google Gemini."""
-        system_prompt = """You are the Threat Intelligence AI Synthesizer for Jerry Security Intelligence.
+        system_prompt = """You are the Threat Intelligence AI Synthesizer for MailShield Security Intelligence.
 Your objective is to analyze evidence from threat reputation providers (VirusTotal, AbuseIPDB, Google Safe Browsing, WHOIS) and produce a structured intelligence dossier.
 
 STRICT NON-NEGOTIABLE ANTI-HALLUCINATION RULES:
@@ -138,7 +138,7 @@ Synthesize this threat intelligence evidence into the requested JSON schema."""
         api_key: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Synthesize network routing, ASN ownership, and geopolitical jurisdiction risk using Google Gemini."""
-        system_prompt = """You are the Network Infrastructure & Geolocation AI Analyst for Jerry Security Intelligence.
+        system_prompt = """You are the Network Infrastructure & Geolocation AI Analyst for MailShield Security Intelligence.
 Analyze passive BGP routing, ASN ownership, and geolocation coordinates to evaluate network risk posture.
 
 STRICT EVIDENCE RULES:
@@ -181,7 +181,7 @@ Evaluate the network infrastructure risk posture in JSON."""
         api_key: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Generate structured executive summary, forensic threat analysis, and cybersecurity containment recommendations from investigation evidence using Google Gemini."""
-        system_prompt = """You are the Lead Cybersecurity Incident Responder and AI Forensic Reporter for Jerry Security Intelligence.
+        system_prompt = """You are the Lead Cybersecurity Incident Responder and AI Forensic Reporter for MailShield Security Intelligence.
 Your task is to write a high-fidelity, evidence-grounded Incident Dossier and Cybersecurity Threat Summary for an SOC investigation report.
 
 NON-NEGOTIABLE CYBERSECURITY REPORTING INVARIANTS:
@@ -232,7 +232,7 @@ Generate the complete structured cybersecurity forensic report dossier in JSON."
         api_key: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Generate a concise cybersecurity executive summary for an analyzed email using Google Gemini."""
-        system_prompt = """You are the Senior Email Security Architect for Jerry Security Intelligence.
+        system_prompt = """You are the Senior Email Security Architect for MailShield Security Intelligence.
 Analyze the email headers, authentication checks (SPF/DKIM/DMARC), body analysis, and IOCs to produce a crisp threat summary.
 
 Return a JSON object:
@@ -262,7 +262,7 @@ Analyze and summarize the cybersecurity threat posture."""
         api_key: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Deep dive forensic analysis evaluating cybersecurity threats, pros (benign security factors), and cons (risk factors) using Google Gemini."""
-        system_prompt = """You are the Principal Email Security Forensics Specialist for Jerry Security Intelligence.
+        system_prompt = """You are the Principal Email Security Forensics Specialist for MailShield Security Intelligence.
 Your task is to conduct an evidence-grounded, anti-hallucinatory deep dive investigation for a specific email message.
 
 STRICT EVIDENCE & ANTI-HALLUCINATION RULES:

@@ -391,6 +391,6 @@ export const useEmailStore = create<EmailStore>()(
       setGeminiApiKey: (key) => set({ geminiApiKey: key || undefined }),
       setOpenaiApiKey: (key) => set({ openaiApiKey: key || undefined }),
     }),
-    { name: "jerry-threat-store" }
+    { name: "mailshield-threat-store" }
   )
 );

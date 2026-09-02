@@ -21,7 +21,7 @@ class TestThreatBackend(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["status"], "healthy")
-        self.assertIn("Jerry Security Intelligence", data["service"])
+        self.assertIn("MailShield Security Intelligence", data["service"])
 
     def test_threat_schema_validation(self):
         """Test Pydantic models enforce valid threat contracts."""

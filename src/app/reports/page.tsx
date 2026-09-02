@@ -44,6 +44,7 @@ import { SeverityBadge } from "@/components/security/SeverityBadge";
 import { ProvenanceBadge } from "@/components/security/ProvenanceBadge";
 import { EmptyState } from "@/components/security/EmptyState";
 import { SectionHeader } from "@/components/security/SectionHeader";
+import { motion } from "framer-motion";
 
 export default function ReportsPage() {
   const {
@@ -198,7 +199,12 @@ export default function ReportsPage() {
       {/* Main Layout: Report List Sidebar + Full Dossier Viewer */}
       <div className="flex-1 flex gap-4 min-h-0">
         {/* Left Column: Report Catalog */}
-        <div className="w-80 flex flex-col gap-2 shrink-0 overflow-y-auto">
+        <motion.div 
+          className="w-80 flex flex-col gap-2 shrink-0 overflow-y-auto"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+          initial="hidden"
+          animate="show"
+        >
           <span className="text-[10px] uppercase font-bold text-muted-foreground px-1">
             Generated Reports ({reports.length})
           </span>
@@ -206,11 +212,12 @@ export default function ReportsPage() {
           {reports.map((r) => {
             const isSelected = r.report_id === (activeReport?.report_id || "");
             return (
-              <div
+              <motion.div
                 key={r.report_id}
+                variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
                 onClick={() => setActiveReportId(r.report_id)}
                 className={cn(
-                  "p-3 rounded-lg border text-left cursor-pointer transition-all space-y-1.5",
+                  "p-3 rounded-lg border text-left cursor-pointer transition-all space-y-1.5 surface-2 hover-lift",
                   isSelected
                     ? "bg-[#141824] border-cyan-500/50 shadow-sm ring-1 ring-cyan-500/20"
                     : "bg-card/40 border-border/40 hover:bg-card/70"
@@ -239,10 +246,10 @@ export default function ReportsPage() {
                   <span>Case: {r.investigation_id}</span>
                   <span suppressHydrationWarning>{format(new Date(r.created_at), "MMM d, HH:mm")}</span>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* Right Column: Full Forensic Dossier */}
         <div className="flex-1 flex flex-col border border-border/50 rounded-xl bg-card/30 backdrop-blur-xl overflow-hidden min-w-0">
@@ -344,7 +351,12 @@ export default function ReportsPage() {
 
                 <div className="space-y-2">
                   {(activeReport.forensic_findings || []).map((f, fi) => (
-                    <div key={fi} className="p-3 rounded-lg bg-card/40 border border-border/30 flex items-start justify-between gap-3">
+                    <div key={fi} className={cn("p-3 rounded-lg bg-card/40 border border-border/30 flex items-start justify-between gap-3 border-l-2", 
+                      f.classification === "AI_INTERPRETATION" ? "border-l-purple-500/50" : 
+                      f.classification === "DERIVED" ? "border-l-red-500/50" : 
+                      f.classification === "OBSERVED" ? "border-l-cyan-500/50" : 
+                      "border-l-emerald-500/50"
+                    )}>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <ProvenanceBadge type={f.classification} size="sm" />

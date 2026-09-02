@@ -51,7 +51,7 @@ class GoogleSafeBrowsingProvider(BaseIntelligenceProvider):
         endpoint = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={key}"
         payload = {
             "client": {
-                "clientId": "jerry-security-intelligence",
+                "clientId": "mailshield-security-intelligence",
                 "clientVersion": "1.0.0",
             },
             "threatInfo": {

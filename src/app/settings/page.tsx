@@ -297,7 +297,7 @@ export default function SettingsPage() {
       )}
 
       {/* SECTION 1: Gmail Mailbox Ingestion Connector */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl">
+      <Card className={cn("border-border/50 bg-card/40 backdrop-blur-xl surface-2", !isConnected && "opacity-90")}>
         <CardHeader className="py-4 px-5 border-b border-border/30">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2 font-mono">
@@ -487,7 +487,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* SECTION 2: Memory & Data Management */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl">
+      <Card className="border-border/50 bg-card/40 backdrop-blur-xl surface-1">
         <CardHeader className="py-4 px-5 border-b border-border/30">
           <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2 font-mono">
             <Database className="h-4 w-4 text-purple-400" />
@@ -536,7 +536,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* SECTION 3: External Threat Intelligence Credentials */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl">
+      <Card className={cn("border-border/50 bg-card/40 backdrop-blur-xl surface-1", (!localVtKey && !localAbuseKey && !localWhoisKey) && "opacity-80 grayscale-[20%]")}>
         <CardHeader className="py-4 px-5 border-b border-border/30">
           <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2 font-mono">
             <Radio className="h-4 w-4 text-emerald-400" />
@@ -592,7 +592,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* SECTION 4: AI Explanation Model Credentials */}
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xl">
+      <Card className={cn("border-border/50 bg-card/40 backdrop-blur-xl surface-1", (!localGeminiKey && !localOpenaiKey) && "opacity-80 grayscale-[20%]")}>
         <CardHeader className="py-4 px-5 border-b border-border/30">
           <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2 font-mono">
             <Sparkles className="h-4 w-4 text-purple-400" />

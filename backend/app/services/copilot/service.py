@@ -19,7 +19,7 @@ from backend.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-COPILOT_SYSTEM_PROMPT = """You are the AI Investigation Copilot for Jerry Security Intelligence.
+COPILOT_SYSTEM_PROMPT = """You are the AI Investigation Copilot for MailShield Security Intelligence.
 Your role is to assist SOC analysts in investigating security case files, explaining correlated email evidence, interpreting threat and network intelligence, and identifying investigative gaps.
 
 NON-NEGOTIABLE SECURITY RULES & BOUNDARIES:

@@ -28,7 +28,7 @@ const SEVERITY_CONFIG: Record<
     bg: "bg-red-500/15",
     text: "text-red-400",
     border: "border-red-500/35",
-    glow: "shadow-[0_0_12px_-3px_rgba(239,68,68,0.3)]",
+    glow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_0_12px_-3px_rgba(239,68,68,0.3)]",
     icon: ShieldAlert,
   },
   high: {
@@ -36,7 +36,7 @@ const SEVERITY_CONFIG: Record<
     bg: "bg-orange-500/15",
     text: "text-orange-400",
     border: "border-orange-500/35",
-    glow: "shadow-[0_0_10px_-3px_rgba(249,115,22,0.25)]",
+    glow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_0_10px_-3px_rgba(249,115,22,0.25)]",
     icon: ShieldAlert,
   },
   medium: {
@@ -44,7 +44,7 @@ const SEVERITY_CONFIG: Record<
     bg: "bg-amber-500/15",
     text: "text-amber-400",
     border: "border-amber-500/35",
-    glow: "shadow-[0_0_10px_-3px_rgba(245,158,11,0.2)]",
+    glow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_0_10px_-3px_rgba(245,158,11,0.2)]",
     icon: AlertTriangle,
   },
   low: {
@@ -52,7 +52,7 @@ const SEVERITY_CONFIG: Record<
     bg: "bg-emerald-500/15",
     text: "text-emerald-400",
     border: "border-emerald-500/30",
-    glow: "",
+    glow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]",
     icon: ShieldCheck,
   },
   clean: {
@@ -60,7 +60,7 @@ const SEVERITY_CONFIG: Record<
     bg: "bg-emerald-500/15",
     text: "text-emerald-400",
     border: "border-emerald-500/30",
-    glow: "",
+    glow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]",
     icon: CheckCircle2,
   },
   unknown: {
@@ -68,7 +68,7 @@ const SEVERITY_CONFIG: Record<
     bg: "bg-slate-500/15",
     text: "text-slate-400",
     border: "border-slate-500/30",
-    glow: "",
+    glow: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]",
     icon: Shield,
   },
 };
@@ -104,6 +104,7 @@ export function SeverityBadge({
         config.text,
         config.border,
         config.glow,
+        normSev === "critical" && "glow-pulse-red",
         sizeClasses[size],
         className
       )}

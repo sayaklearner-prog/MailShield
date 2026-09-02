@@ -17,7 +17,7 @@ from backend.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_EXPLANATION_PROMPT = """You are the AI Forensic Interpretation Engine for Jerry Security Intelligence.
+SYSTEM_EXPLANATION_PROMPT = """You are the AI Forensic Interpretation Engine for MailShield Security Intelligence.
 Your role is to generate an explainable, human-readable forensic summary and recommended next steps based on the DETERMINISTIC SECURITY ASSESSMENT that has already been evaluated.
 
 CRITICAL INSTRUCTIONS & SECURITY DEFENSE:

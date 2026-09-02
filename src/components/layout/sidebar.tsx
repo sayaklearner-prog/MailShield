@@ -52,7 +52,7 @@ export function Sidebar() {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-extrabold tracking-tight text-foreground">JERRY</span>
+              <span className="text-sm font-extrabold tracking-tight text-foreground">MAILSHIELD</span>
               <span className="text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.2 bg-cyan-500/15 text-cyan-400 rounded border border-cyan-500/30">
                 SECURITY
               </span>
@@ -77,42 +77,43 @@ export function Sidebar() {
                 (item.href !== "/" && pathname.startsWith(item.href));
 
               return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "relative flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-150 group",
-                    isActive
-                      ? "text-cyan-400 font-bold"
-                      : "text-muted-foreground hover:text-foreground hover:bg-card/60"
-                  )}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="sidebar-active-pill"
-                      className="absolute inset-0 rounded-lg bg-cyan-500/10 border border-cyan-500/30 shadow-[0_0_12px_-3px_rgba(14,165,233,0.25)]"
-                      style={{ zIndex: -1 }}
-                      transition={{ type: "spring", bounce: 0.15, duration: 0.35 }}
-                    />
-                  )}
-                  <item.icon
+                <motion.div key={item.name} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    href={item.href}
                     className={cn(
-                      "h-4 w-4 shrink-0 transition-colors",
-                      isActive ? "text-cyan-400" : "text-muted-foreground group-hover:text-foreground"
+                      "relative flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-150 group",
+                      isActive
+                        ? "text-cyan-400 font-bold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-card/60"
                     )}
-                  />
-                  <span className="truncate">{item.name}</span>
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="sidebar-active-pill"
+                        className="absolute inset-0 rounded-lg bg-cyan-500/10 border border-cyan-500/30 shadow-[0_0_12px_-3px_rgba(14,165,233,0.25)]"
+                        style={{ zIndex: -1 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                    <item.icon
+                      className={cn(
+                        "h-4 w-4 shrink-0 transition-colors",
+                        isActive ? "text-cyan-400" : "text-muted-foreground group-hover:text-foreground"
+                      )}
+                    />
+                    <span className="truncate">{item.name}</span>
 
-                  {item.name === "Emails" && criticalThreats > 0 ? (
-                    <span className="ml-auto rounded-md bg-red-500/20 text-red-400 border border-red-500/35 text-[9px] font-mono font-bold px-1.5 py-0.5 leading-none">
-                      {criticalThreats} alert{criticalThreats > 1 ? "s" : ""}
-                    </span>
-                  ) : (
-                    <span className="ml-auto text-[8px] font-mono text-muted-foreground/50 uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
-                      {item.tag}
-                    </span>
-                  )}
-                </Link>
+                    {item.name === "Emails" && criticalThreats > 0 ? (
+                      <span className="ml-auto rounded-md bg-red-500/20 text-red-400 border border-red-500/35 text-[9px] font-mono font-bold px-1.5 py-0.5 leading-none">
+                        {criticalThreats} alert{criticalThreats > 1 ? "s" : ""}
+                      </span>
+                    ) : (
+                      <span className="ml-auto text-[8px] font-mono text-muted-foreground/50 uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
+                        {item.tag}
+                      </span>
+                    )}
+                  </Link>
+                </motion.div>
               );
             })}
           </nav>
@@ -121,7 +122,7 @@ export function Sidebar() {
 
       {/* Real-time Triage Telemetry Footer */}
       <div className="p-3 border-t border-border/40 space-y-3 bg-[#0A0C12]/80">
-        <div className="rounded-lg bg-card/60 p-2.5 space-y-2 border border-border/40">
+        <div className="rounded-lg bg-card/60 p-2.5 space-y-2 border border-border/40 surface-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Activity className="h-3.5 w-3.5 text-cyan-400" />

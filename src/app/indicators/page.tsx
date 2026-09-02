@@ -32,6 +32,7 @@ import { SeverityBadge } from "@/components/security/SeverityBadge";
 import { ProvenanceBadge } from "@/components/security/ProvenanceBadge";
 import { EmptyState } from "@/components/security/EmptyState";
 import { SectionHeader } from "@/components/security/SectionHeader";
+import { motion } from "framer-motion";
 
 type FilterCategory = "all" | "url" | "domain" | "ip" | "email" | "attachment";
 
@@ -260,13 +261,19 @@ export default function IndicatorsPage() {
           description="No technical artifacts match the selected filters."
         />
       ) : (
-        <div className="space-y-2">
+        <motion.div 
+          className="space-y-2"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.03 } } }}
+          initial="hidden"
+          animate="show"
+        >
           {filteredArtifacts.map((item) => {
             const enriched = enrichedIndicators[item.value.toLowerCase()];
             const hasIntel = !!enriched;
 
             return (
-              <Card key={item.id} className="border-border/40 bg-card/40 hover:bg-card/70 transition-colors">
+              <motion.div key={item.id} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
+              <Card className="border-border/40 bg-card/40 hover:bg-card/70 transition-colors surface-1 hover-lift">
                 <CardContent className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="p-1.5 rounded bg-muted/60 shrink-0">{getIcon(item.type)}</div>
@@ -362,9 +369,10 @@ export default function IndicatorsPage() {
                   </div>
                 </CardContent>
               </Card>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* URL Forensic Detail Drawer */}

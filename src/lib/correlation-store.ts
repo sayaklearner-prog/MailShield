@@ -441,6 +441,6 @@ export const useCorrelationStore = create<CorrelationStore>()(
       selectNode: (node) => set({ selectedNode: node, selectedEdge: null }),
       selectEdge: (edge) => set({ selectedEdge: edge, selectedNode: null }),
     }),
-    { name: "jerry-correlation-store" }
+    { name: "mailshield-correlation-store" }
   )
 );

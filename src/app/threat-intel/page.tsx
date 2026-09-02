@@ -42,6 +42,7 @@ import { SeverityBadge } from "@/components/security/SeverityBadge";
 import { ProvenanceBadge } from "@/components/security/ProvenanceBadge";
 import { EmptyState } from "@/components/security/EmptyState";
 import { SectionHeader } from "@/components/security/SectionHeader";
+import { motion } from "framer-motion";
 
 export default function ThreatIntelligencePage() {
   const {
@@ -184,7 +185,7 @@ export default function ThreatIntelligencePage() {
               : "WHOIS & RDAP Intel";
 
           return (
-            <Card key={p.provider} className="border-border/40 bg-card/40 backdrop-blur-xl">
+            <Card key={p.provider} className="border-border/40 bg-card/40 backdrop-blur-xl surface-1">
               <CardContent className="p-4 flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -312,9 +313,15 @@ export default function ThreatIntelligencePage() {
               description="Extract indicators from ingested emails or query external IOCs using the search bar above."
             />
           ) : (
-            <div className="space-y-3">
+            <motion.div 
+              className="space-y-3"
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+              initial="hidden"
+              animate="show"
+            >
               {filteredIndicators.map((item) => (
-                <Card key={item.indicator} className="border-border/40 bg-card/40">
+                <motion.div key={item.indicator} variants={{ hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } }}>
+                <Card className="border-border/40 bg-card/40 surface-2 hover-lift">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/20 pb-2.5">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -403,8 +410,9 @@ export default function ThreatIntelligencePage() {
                     )}
                   </CardContent>
                 </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
         </div>
       )}

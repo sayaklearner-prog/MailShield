@@ -3,7 +3,7 @@ from typing import Optional, List
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Jerry Security Intelligence API"
+    PROJECT_NAME: str = "MailShield Security Intelligence API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
 

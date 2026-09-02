@@ -1,4 +1,4 @@
-# Jerry Security Intelligence — Product Roadmap
+# MailShield Security Intelligence — Product Roadmap
 
 This document defines the phased progression for the **AI-Powered Email Threat Detection, Geolocation & Forensic Intelligence Platform**.
 

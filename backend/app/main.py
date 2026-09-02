@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Jerry Security Intelligence — AI-Powered Email Threat Detection & Forensic Intelligence Platform API",
+    description="MailShield Security Intelligence — AI-Powered Email Threat Detection & Forensic Intelligence Platform API",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
@@ -54,7 +54,7 @@ async def health_check():
 async def root_status():
     """Root status endpoint."""
     return {
-        "message": "Jerry Security Intelligence API is operational.",
+        "message": "MailShield Security Intelligence API is operational.",
         "docs": f"{settings.API_V1_STR}/docs",
     }
 

@@ -1,6 +1,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface SecurityMetricCardProps {
   title: string;
@@ -59,10 +60,11 @@ export function SecurityMetricCard({
   const config = VARIANT_CONFIG[variant];
 
   return (
-    <div
+    <motion.div
       onClick={onClick}
+      whileTap={onClick ? { scale: 0.98 } : undefined}
       className={cn(
-        "p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-xl transition-all duration-200",
+        "surface-2 hover-lift p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-xl transition-all duration-200",
         config.glow,
         onClick && "cursor-pointer hover:bg-card/80",
         className
@@ -71,7 +73,7 @@ export function SecurityMetricCard({
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</p>
-          <p className="text-2xl font-bold font-mono text-foreground tracking-tight">{value}</p>
+          <p className="text-3xl font-extrabold font-mono text-foreground tracking-tight">{value}</p>
         </div>
         <div className={cn("p-2 rounded-lg shrink-0", config.iconBg)}>
           <Icon className="h-4 w-4" />
@@ -93,6 +95,6 @@ export function SecurityMetricCard({
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
