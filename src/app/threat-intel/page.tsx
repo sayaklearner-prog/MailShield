@@ -9,6 +9,8 @@ import {
 import { useNetworkStore, NetworkIntelligence } from "@/lib/network-store";
 import { useURLIntelligenceStore, URLAnalysisResult } from "@/lib/url-intelligence-store";
 import { UrlDetailDrawer } from "@/components/security/UrlDetailDrawer";
+import { SecurityMetricCard } from '@/components/security/SecurityMetricCard';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,6 +133,15 @@ export default function ThreatIntelligencePage() {
     return matchesSearch && matchesVerdict && matchesType;
   });
 
+  const configuredCount = providerStatuses.filter(p => p.configured).length;
+  const maliciousCount = indicatorsList.filter(i => i.overall_verdict === 'malicious' || i.overall_verdict === 'suspicious').length;
+
+  const PROVIDER_CONFIG: Record<string, { icon: any; label: string; colorClass: string }> = {
+    virustotal: { icon: ShieldCheck, label: 'VirusTotal API v3', colorClass: 'text-emerald-400' },
+    abuseipdb: { icon: ShieldAlert, label: 'AbuseIPDB v2', colorClass: 'text-amber-400' },
+    whois: { icon: Database, label: 'WHOIS & RDAP Intel', colorClass: 'text-cyan-400' },
+  };
+
   return (
     <div className="space-y-6 p-6 lg:p-8 max-w-7xl mx-auto h-full overflow-y-auto font-mono">
       {/* Page Header */}
@@ -150,63 +161,116 @@ export default function ThreatIntelligencePage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-1 bg-card/60 p-1 rounded-lg border border-border/40 text-xs">
-          <button
-            onClick={() => setActiveView("indicators")}
-            className={cn(
-              "px-3 py-1.5 rounded-md font-semibold transition-colors flex items-center gap-1.5",
-              activeView === "indicators" ? "bg-cyan-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Database className="h-3.5 w-3.5" />
-            IOC Reputation
-          </button>
-          <button
-            onClick={() => setActiveView("network")}
-            className={cn(
-              "px-3 py-1.5 rounded-md font-semibold transition-colors flex items-center gap-1.5",
-              activeView === "network" ? "bg-cyan-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Globe className="h-3.5 w-3.5" />
-            IP Geolocation & ASN ({networkList.length})
-          </button>
+        <div className="relative flex items-center p-1 rounded-xl bg-card/60 border border-border/40 backdrop-blur-md">
+          {[
+            { id: 'indicators' as const, label: 'IOC Reputation', icon: Database, count: indicatorsList.length },
+            { id: 'network' as const, label: 'IP Geolocation & ASN', icon: Globe, count: networkList.length },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveView(tab.id)}
+              className={cn(
+                "relative z-10 px-4 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 flex-1 justify-center",
+                activeView === tab.id ? "text-white" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <tab.icon className="h-3.5 w-3.5" />
+              {tab.label} ({tab.count})
+              {activeView === tab.id && (
+                <motion.div
+                  layoutId="threat-intel-view-pill"
+                  className="absolute inset-0 bg-cyan-600 rounded-lg shadow-sm"
+                  style={{ zIndex: -1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* Summary Metrics Strip */}
+      <motion.div 
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+        initial="hidden"
+        animate="show"
+      >
+        <SecurityMetricCard
+          title="Providers Configured"
+          value={`${configuredCount}/3`}
+          icon={ShieldCheck}
+          variant={configuredCount > 0 ? 'emerald' : 'amber'}
+          badgeText="COVERAGE"
+        />
+        <SecurityMetricCard
+          title="Indicators Enriched"
+          value={indicatorsList.length}
+          icon={Database}
+          variant="cyan"
+          badgeText="IOC"
+        />
+        <SecurityMetricCard
+          title="Geolocation Records"
+          value={networkList.length}
+          icon={Globe}
+          variant="violet"
+          badgeText="GEO"
+        />
+        <SecurityMetricCard
+          title="High Risk Threats"
+          value={maliciousCount}
+          icon={ShieldAlert}
+          variant={maliciousCount > 0 ? 'red' : 'emerald'}
+          badgeText="RISK"
+        />
+      </motion.div>
+
       {/* Provider Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {providerStatuses.map((p) => {
-          const nameLabel =
-            p.provider === "virustotal"
-              ? "VirusTotal API v3"
-              : p.provider === "abuseipdb"
-              ? "AbuseIPDB v2"
-              : "WHOIS & RDAP Intel";
+          const config = PROVIDER_CONFIG[p.provider] || PROVIDER_CONFIG.whois;
+          const Icon = config.icon;
 
           return (
-            <Card key={p.provider} className="border-border/40 bg-card/40 backdrop-blur-xl surface-1">
+            <Card 
+              key={p.provider} 
+              className={cn(
+                "border-border/40 bg-card/40 backdrop-blur-xl transition-all",
+                p.configured 
+                  ? "surface-2 border-l-[3px] border-l-emerald-500" 
+                  : "border-dashed border-border/50 opacity-80 hover:opacity-100"
+              )}
+            >
               <CardContent className="p-4 flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Radio className={cn("h-3.5 w-3.5", p.configured ? "text-emerald-400" : "text-cyan-400")} />
-                    <span className="font-bold text-xs text-foreground">{nameLabel}</span>
+                    <Icon className={cn("h-3.5 w-3.5", p.configured ? config.colorClass : "opacity-40")} />
+                    <span className={cn("font-bold text-xs text-foreground", !p.configured && "text-muted-foreground")}>
+                      {config.label}
+                    </span>
                   </div>
                   <div className="text-[10px] text-muted-foreground">
                     Types: {p.supported_types.join(", ")}
                   </div>
-                  <div className="text-[9px] text-muted-foreground/80 mt-1">
-                    {p.configured ? "Active & Configured" : "Operational (Core telemetry available)"}
+                  <div className="text-[9px] text-muted-foreground/80 mt-1 flex items-center justify-between">
+                    {p.configured ? "Active & Operational" : (
+                      <Link href="/settings" className="text-cyan-400 hover:text-cyan-300 transition-colors">
+                        Configure →
+                      </Link>
+                    )}
                   </div>
                 </div>
                 <Badge
                   variant="outline"
                   className={cn(
                     "text-[9px] font-mono uppercase",
-                    p.configured ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-muted text-muted-foreground"
+                    p.configured 
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.1)]" 
+                      : "bg-muted/50 text-muted-foreground opacity-60"
                   )}
                 >
-                  {p.status}
+                  {p.configured ? 'READY' : 'UNCONFIGURED'}
                 </Badge>
               </CardContent>
             </Card>
@@ -306,11 +370,23 @@ export default function ThreatIntelligencePage() {
             </div>
           </div>
 
-          {filteredIndicators.length === 0 ? (
+          {indicatorsList.length === 0 && filteredIndicators.length === 0 ? (
             <EmptyState
-              icon={Globe}
-              title="No Threat Intelligence Records Match Filter"
-              description="Extract indicators from ingested emails or query external IOCs using the search bar above."
+              icon={Database}
+              title="No Enriched Threat Intelligence Yet"
+              description="Query external IOCs using the search bar above, or sync your Gmail mailbox to automatically extract and enrich indicators."
+              actionLabel="Open Settings →"
+              onAction={() => window.location.href = '/settings'}
+              className="py-8"
+            />
+          ) : filteredIndicators.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="No Results Match Current Filters"
+              description="No enriched indicators match your current search query, verdict, or type filters."
+              actionLabel="Clear All Filters"
+              onAction={() => { setSearchFilter(''); setSelectedVerdict('all'); setSelectedType('all'); }}
+              className="py-8"
             />
           ) : (
             <motion.div 
