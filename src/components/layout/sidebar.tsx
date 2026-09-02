@@ -21,7 +21,7 @@ import { motion } from "framer-motion";
 import { LoginButton } from "@/components/auth/login-button";
 
 const navItems = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard, tag: "SOC" },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, tag: "SOC" },
   { name: "Investigations", href: "/investigations", icon: ShieldCheck, tag: "GRAPH" },
   { name: "Emails", href: "/email", icon: Mail, tag: "TRIAGE" },
   { name: "Threat Intelligence", href: "/threat-intel", icon: Radio, tag: "IOC" },
@@ -34,6 +34,11 @@ export function Sidebar() {
   const pathname = usePathname();
   const { emails } = useEmailStore();
 
+  // Do not display internal SOC sidebar on public landing page
+  if (pathname === "/") {
+    return null;
+  }
+
   const totalAnalyzed = emails.filter((e) => !!e.threatAnalysis).length;
   const criticalThreats = emails.filter(
     (e) => e.threatAnalysis && (e.threatAnalysis.severity === "critical" || e.threatAnalysis.threatScore >= 60)
@@ -43,7 +48,7 @@ export function Sidebar() {
     <div className="flex h-full w-64 flex-col border-r border-border/50 bg-[#0C0E15]/95 backdrop-blur-2xl select-none shrink-0 z-20">
       {/* Brand Header */}
       <div className="flex h-16 items-center px-4 border-b border-border/40">
-        <Link href="/" className="flex items-center gap-2.5 group">
+        <Link href="/dashboard" className="flex items-center gap-2.5 group">
           <div className="relative">
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-cyan-600 via-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-white/20 transition-transform group-hover:scale-105">
               <ShieldAlert className="h-4.5 w-4.5 text-white" />
