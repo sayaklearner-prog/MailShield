@@ -9,6 +9,7 @@ import {
   TimestampPrecision,
 } from "@/lib/report-store";
 import { useCorrelationStore } from "@/lib/correlation-store";
+import { useEmailStore } from "@/lib/email-store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,14 +117,40 @@ export default function ReportsPage() {
   const handleRegenerateAISummary = async () => {
     if (!activeReport) return;
     setIsSynthesizingAI(true);
-    toast.info("Synthesizing cybersecurity threat summary with Google Gemini AI (Key2)...");
+    toast.info("Synthesizing cybersecurity threat summary with Google Gemini AI...");
     try {
+      const { geminiApiKey, openaiApiKey, emails } = useEmailStore.getState();
+      const matchedEmail = emails.find(
+        (e) =>
+          activeReport.title.toLowerCase().includes(e.subject.toLowerCase()) ||
+          activeReport.evidence_references?.some((ref) => ref.includes(e.id) || ref.includes(e.subject))
+      ) || emails[0];
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (geminiApiKey) headers["x-gemini-api-key"] = geminiApiKey;
+      if (openaiApiKey) headers["x-openai-api-key"] = openaiApiKey;
+
       const response = await fetch(`/api/correlation/investigations/${activeReport.investigation_id}/copilot`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           question: "Generate a comprehensive executive summary of the email cybersecurity threat, attacker vectors, and investigation findings.",
           response_mode: "report_draft",
+          case_title: activeReport.title,
+          gemini_api_key: geminiApiKey,
+          openai_api_key: openaiApiKey,
+          email_context: matchedEmail
+            ? {
+                id: matchedEmail.id,
+                subject: matchedEmail.subject,
+                from: matchedEmail.fromEmail || matchedEmail.from,
+                threat_score: activeReport.threat_assessment?.peak_threat_score || matchedEmail.threatAnalysis?.threatScore,
+                severity: activeReport.threat_assessment?.severity || matchedEmail.threatAnalysis?.severity,
+                classification: activeReport.threat_assessment?.classification || matchedEmail.threatAnalysis?.classification,
+                signals: matchedEmail.threatAnalysis?.signals,
+                indicators: matchedEmail.threatAnalysis?.indicators || matchedEmail.forensicData?.urls,
+              }
+            : undefined,
         }),
       });
       if (response.ok) {

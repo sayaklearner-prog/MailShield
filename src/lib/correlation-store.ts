@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useEmailStore } from "./email-store";
 
 export type NodeType =
   | "email"
@@ -398,12 +399,41 @@ export const useCorrelationStore = create<CorrelationStore>()(
       askCopilot: async (caseId, question, mode = "summary") => {
         set({ isCopilotLoading: true });
         try {
+          const { geminiApiKey, openaiApiKey, emails } = useEmailStore.getState();
+          const currentCase = get().investigations.find((c) => c.id === caseId) || get().investigations[0];
+          const matchedEmail = emails.find(
+            (e) =>
+              currentCase?.related_email_ids?.includes(e.id) ||
+              currentCase?.root_entity_id === `email:${e.id}` ||
+              currentCase?.root_entity_id === e.id ||
+              (currentCase?.title && currentCase.title.toLowerCase().includes(e.subject.toLowerCase()))
+          ) || emails[0];
+
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (geminiApiKey) headers["x-gemini-api-key"] = geminiApiKey;
+          if (openaiApiKey) headers["x-openai-api-key"] = openaiApiKey;
+
           const res = await fetch(`/api/correlation/investigations/${caseId}/copilot`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({
               question,
               response_mode: mode,
+              gemini_api_key: geminiApiKey,
+              openai_api_key: openaiApiKey,
+              case_title: currentCase?.title,
+              email_context: matchedEmail
+                ? {
+                    id: matchedEmail.id,
+                    subject: matchedEmail.subject,
+                    from: matchedEmail.fromEmail || matchedEmail.from,
+                    threat_score: matchedEmail.threatAnalysis?.threatScore,
+                    severity: matchedEmail.threatAnalysis?.severity,
+                    classification: matchedEmail.threatAnalysis?.classification,
+                    signals: matchedEmail.threatAnalysis?.signals,
+                    indicators: matchedEmail.threatAnalysis?.indicators || matchedEmail.forensicData?.urls,
+                  }
+                : undefined,
             }),
           });
 

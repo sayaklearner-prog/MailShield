@@ -120,6 +120,9 @@ interface URLIntelligenceStore {
   clear: () => void;
 }
 
+import { useEmailStore } from "./email-store";
+import { useIntelligenceStore } from "./intelligence-store";
+
 export const useURLIntelligenceStore = create<URLIntelligenceStore>()(
   persist(
     (set, get) => ({
@@ -134,9 +137,19 @@ export const useURLIntelligenceStore = create<URLIntelligenceStore>()(
       analyzeUrl: async (url, evidenceRef, emailId) => {
         set({ isAnalyzing: true });
         try {
+          const { geminiApiKey, openaiApiKey } = useEmailStore.getState();
+          const { virustotalApiKey, abuseipdbApiKey, whoisApiKey } = useIntelligenceStore.getState();
+
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (geminiApiKey) headers["x-gemini-api-key"] = geminiApiKey;
+          if (openaiApiKey) headers["x-openai-api-key"] = openaiApiKey;
+          if (virustotalApiKey) headers["x-virustotal-api-key"] = virustotalApiKey;
+          if (abuseipdbApiKey) headers["x-abuseipdb-api-key"] = abuseipdbApiKey;
+          if (whoisApiKey) headers["x-whois-api-key"] = whoisApiKey;
+
           const res = await fetch("/api/url-intelligence/analyze", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({
               url,
               evidence_reference: evidenceRef,
@@ -168,9 +181,19 @@ export const useURLIntelligenceStore = create<URLIntelligenceStore>()(
         if (!items || items.length === 0) return;
         set({ isAnalyzing: true });
         try {
+          const { geminiApiKey, openaiApiKey } = useEmailStore.getState();
+          const { virustotalApiKey, abuseipdbApiKey, whoisApiKey } = useIntelligenceStore.getState();
+
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (geminiApiKey) headers["x-gemini-api-key"] = geminiApiKey;
+          if (openaiApiKey) headers["x-openai-api-key"] = openaiApiKey;
+          if (virustotalApiKey) headers["x-virustotal-api-key"] = virustotalApiKey;
+          if (abuseipdbApiKey) headers["x-abuseipdb-api-key"] = abuseipdbApiKey;
+          if (whoisApiKey) headers["x-whois-api-key"] = whoisApiKey;
+
           const res = await fetch("/api/url-intelligence/analyze-batch", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({
               urls: items.map((it) => ({
                 url: it.url,

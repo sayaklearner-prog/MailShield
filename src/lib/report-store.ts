@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useEmailStore } from "./email-store";
+import { useCorrelationStore } from "./correlation-store";
 
 export type ReportStatus = "draft" | "reviewed" | "final";
 export type ReportGenerationStatus = "generating" | "ready" | "partial" | "failed";
@@ -264,13 +266,47 @@ export const useReportStore = create<ReportStore>()(
       generateReport: async (investigationId, title, notes) => {
         set({ isGenerating: true });
         try {
+          const { emails, geminiApiKey, openaiApiKey } = useEmailStore.getState();
+          const { investigations } = useCorrelationStore.getState();
+
+          const targetCase = investigations.find((c) => c.id === investigationId) || investigations[0];
+          const matchedEmail = emails.find(
+            (e) =>
+              targetCase?.related_email_ids?.includes(e.id) ||
+              targetCase?.root_entity_id === `email:${e.id}` ||
+              targetCase?.root_entity_id === e.id ||
+              (targetCase?.title && targetCase.title.toLowerCase().includes(e.subject.toLowerCase()))
+          ) || emails[0];
+
+          const threatScore = matchedEmail?.threatAnalysis?.threatScore ?? 85;
+          const severity = (matchedEmail?.threatAnalysis?.severity || (threatScore >= 60 ? "critical" : "high")).toLowerCase();
+          const classification = matchedEmail?.threatAnalysis?.classification || "SUSPICIOUS_EMAIL";
+          const signals = matchedEmail?.threatAnalysis?.signals || [];
+          const emailSubject = matchedEmail?.subject || title || `Incident Dossier: ${investigationId}`;
+          const emailSender = matchedEmail?.fromEmail || matchedEmail?.from || "observed sender";
+
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (geminiApiKey) headers["x-gemini-api-key"] = geminiApiKey;
+          if (openaiApiKey) headers["x-openai-api-key"] = openaiApiKey;
+
           const res = await fetch(`/api/investigations/${investigationId}/reports`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({
               investigation_id: investigationId,
-              title,
+              title: title || `Forensic Incident Dossier: ${emailSubject}`,
               analyst_notes: notes,
+              threat_score: threatScore,
+              severity,
+              classification,
+              confidence: matchedEmail?.threatAnalysis?.confidence || 0.95,
+              email_subject: emailSubject,
+              email_sender: emailSender,
+              indicators: matchedEmail?.forensicData?.urls || matchedEmail?.threatAnalysis?.indicators,
+              auth_analysis: matchedEmail?.forensicData?.authentication,
+              raw_headers: matchedEmail?.rawHeadersList,
+              gemini_api_key: geminiApiKey,
+              openai_api_key: openaiApiKey,
             }),
           });
 
