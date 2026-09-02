@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldAlert,
   ShieldCheck,
@@ -26,14 +26,32 @@ import {
   Terminal,
   Activity,
   Cpu,
+  X,
+  Code2,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SecurityCore3D } from "@/components/landing/SecurityCore3D";
+import { TiltCard3D } from "@/components/landing/TiltCard3D";
+import { BackgroundConstellation3D } from "@/components/landing/BackgroundConstellation3D";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const PIPELINE_STAGES = [
+interface PipelineStage {
+  step: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tag: string;
+  color: string;
+  desc: string;
+  spec: string;
+  inputs: string[];
+  outputs: string[];
+  guarantee: string;
+}
+
+const PIPELINE_STAGES: PipelineStage[] = [
   {
     step: "01",
     name: "Gmail Ingestion",
@@ -41,6 +59,10 @@ const PIPELINE_STAGES = [
     tag: "READ-ONLY",
     color: "cyan",
     desc: "Read-only sync over RFC 5322 MIME stream with zero mail modification.",
+    spec: "Google OAuth 2.0 (gmail.readonly scope) · RFC 5322 Stream Ingestion",
+    inputs: ["OAuth Authorization Code", "IMAP/REST Envelope", "User Access Token"],
+    outputs: ["Raw EML Streams", "RFC 822 MIME Boundaries", "Message-ID Tracking"],
+    guarantee: "100% Read-Only: Zero write, delete, or send permission requested.",
   },
   {
     step: "02",
@@ -49,6 +71,10 @@ const PIPELINE_STAGES = [
     tag: "RFC 5322",
     color: "cyan",
     desc: "Extracts transport headers, relay hops, URLs, domains, and attachment hashes.",
+    spec: "RFC 5321 Transport Tracer · SHA-256 Artifact Hasher · URI Parser",
+    inputs: ["Raw MIME Payload", "Received: Header Tree", "Multipart Formats"],
+    outputs: ["Relay Hop IPs", "Deobfuscated URLs", "File Hashes", "Reply-To Discrepancies"],
+    guarantee: "Deterministic Parsing: Isolated sandbox parsing with regex & MIME decoders.",
   },
   {
     step: "03",
@@ -57,6 +83,10 @@ const PIPELINE_STAGES = [
     tag: "RULE ENGINE",
     color: "emerald",
     desc: "SPF, DKIM, and DMARC cryptographic validation plus heuristic rule checks.",
+    spec: "RFC 7208 (SPF) · RFC 6376 (DKIM) · RFC 7489 (DMARC) · Rule Matrix",
+    inputs: ["Authentication-Results Header", "DNS TXT Records", "DKIM-Signature Header"],
+    outputs: ["Alignment Verdicts (Pass/Fail)", "Domain Impersonation Score", "Heuristic Flags"],
+    guarantee: "Deterministic Grounding: Threat scores computed mathematically before AI analysis.",
   },
   {
     step: "04",
@@ -65,6 +95,10 @@ const PIPELINE_STAGES = [
     tag: "MULTI-SOURCE",
     color: "violet",
     desc: "Corroboration across VirusTotal API v3, AbuseIPDB v2, and WHOIS/RDAP registries.",
+    spec: "VirusTotal v3 REST · AbuseIPDB v2 Confidence Engine · ICANN RDAP",
+    inputs: ["Extracted IPs", "Observed FQDNs", "SHA-256 File Hashes"],
+    outputs: ["Multi-Engine Detection Ratios", "Confidence Percentiles", "Registrar Timelines"],
+    guarantee: "Zero Hardcoded Data: Live API enrichment with telemetry caching.",
   },
   {
     step: "05",
@@ -73,6 +107,10 @@ const PIPELINE_STAGES = [
     tag: "TOPOLOGY",
     color: "cyan",
     desc: "Multi-hop graph linking shared relay infrastructure across distinct cases.",
+    spec: "Adjacency Topology Engine · Multi-Case Incident Aggregator",
+    inputs: ["Extracted Relay Hops", "Corroborated Indicators", "Case Identifiers"],
+    outputs: ["Infrastructure Clusters", "Campaign Linkages", "Chronological Timelines"],
+    guarantee: "Explainable Relationships: Explicit graph edges (e.g. ROUTED_THROUGH, IMPERSONATES).",
   },
   {
     step: "06",
@@ -81,6 +119,10 @@ const PIPELINE_STAGES = [
     tag: "GEMINI 2.5",
     color: "violet",
     desc: "Explainable risk synthesis strictly grounded in immutable evidence.",
+    spec: "Google Gemini 2.5 Flash API · Strict System Persona (Temperature 0.1)",
+    inputs: ["Deterministic Score", "Cryptographic Verdicts", "Correlated Graph Nodes"],
+    outputs: ["Executive Incident Briefing", "SOC Containment Checklist", "Interactive Q&A"],
+    guarantee: "AI ≠ Evidence: AI explains observed facts but never alters underlying scores.",
   },
   {
     step: "07",
@@ -89,6 +131,10 @@ const PIPELINE_STAGES = [
     tag: "SHA-256",
     color: "emerald",
     desc: "Cryptographically sealed incident dossier ready for SOC and CISO export.",
+    spec: "SHA-256 Cryptographic Checksum · JSON Evidence Package · PDF Exporter",
+    inputs: ["Full Case State", "Evidence References", "Analyst Signed Notes"],
+    outputs: ["Immutable Report (v1/v2/v3)", "Cryptographic Hash Seal", "Evidence JSON"],
+    guarantee: "Chain of Custody: Any post-generation modification breaks the SHA-256 signature.",
   },
 ];
 
@@ -98,6 +144,7 @@ const ARCHITECTURE_LAYERS = [
     title: "OBSERVED FACT",
     badge: "IMMUTABLE",
     badgeColor: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
+    spotlight: "rgba(14, 165, 233, 0.22)",
     icon: Fingerprint,
     borderColor: "border-l-cyan-500",
     desc: "Direct ground truth extracted from email MIME structures, RFC 5321/5322 headers, cryptographic transport signatures, and message routing records.",
@@ -113,6 +160,7 @@ const ARCHITECTURE_LAYERS = [
     title: "DERIVED RELATIONSHIP",
     badge: "DETERMINISTIC",
     badgeColor: "bg-violet-500/10 text-violet-400 border-violet-500/30",
+    spotlight: "rgba(139, 92, 246, 0.2)",
     icon: Network,
     borderColor: "border-l-violet-500",
     desc: "Algorithmic correlation connecting multiple messages across shared relays, IP subnets, typosquatted registration patterns, and multi-source threat intelligence.",
@@ -128,6 +176,7 @@ const ARCHITECTURE_LAYERS = [
     title: "AI INTERPRETATION",
     badge: "EXPLAINABLE",
     badgeColor: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+    spotlight: "rgba(192, 132, 252, 0.22)",
     icon: Sparkles,
     borderColor: "border-l-purple-500",
     desc: "Google Gemini 2.5 Flash narrative reasoning that explains attacker vectors and threat mechanics strictly grounded in observed evidence. AI never alters deterministic scores.",
@@ -168,7 +217,7 @@ export default function MailShieldCoverPage() {
   const { data: session, status } = useSession();
   const [authState, setAuthState] = useState<"idle" | "connecting" | "error">("idle");
   const [authErrorMsg, setAuthErrorMsg] = useState<string | null>(null);
-  const [activeStage, setActiveStage] = useState<number | null>(null);
+  const [inspectedStage, setInspectedStage] = useState<PipelineStage | null>(null);
 
   // If already authenticated, redirect straight to /dashboard
   useEffect(() => {
@@ -201,15 +250,18 @@ export default function MailShieldCoverPage() {
 
   return (
     <div className="min-h-screen bg-[#07090D] text-foreground selection:bg-cyan-500/20 selection:text-cyan-300 font-sans overflow-x-hidden relative">
-      {/* Background Gradients & Micro-Grid */}
+      {/* 3D Ambient Constellation Field */}
+      <BackgroundConstellation3D />
+
+      {/* Background Micro-Grid and Vignette */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#0ea5e905_1px,transparent_1px),linear-gradient(to_bottom,#0ea5e905_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-cyan-600/10 via-purple-600/5 to-transparent blur-3xl opacity-60" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#0ea5e906_1px,transparent_1px),linear-gradient(to_bottom,#0ea5e906_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[850px] h-[450px] bg-gradient-to-b from-cyan-600/12 via-purple-600/6 to-transparent blur-3xl opacity-60" />
       </div>
 
       {/* FLOATING MINIMALIST COMMAND NAVBAR */}
       <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl">
-        <nav className="flex items-center justify-between px-4 py-2.5 rounded-2xl border border-border/40 bg-[#0C1017]/85 backdrop-blur-xl shadow-2xl shadow-black/60">
+        <nav className="flex items-center justify-between px-4 py-2.5 rounded-2xl border border-border/40 bg-[#0C1017]/85 backdrop-blur-2xl shadow-2xl shadow-black/60">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-cyan-600 via-blue-600 to-indigo-700 flex items-center justify-center shadow-md shadow-cyan-500/20 ring-1 ring-white/20 transition-transform group-hover:scale-105">
               <ShieldAlert className="h-4 w-4 text-white" />
@@ -363,7 +415,7 @@ export default function MailShieldCoverPage() {
             <Button
               variant="outline"
               size="lg"
-              className="w-full sm:w-auto h-12 text-xs font-mono border-border/50 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground bg-[#0C1017]/60"
+              className="w-full sm:w-auto h-12 text-xs font-mono border-border/50 hover:border-cyan-500/40 text-muted-foreground hover:text-foreground bg-[#0C1017]/70"
             >
               Explore Intelligence Console
               <ExternalLink className="h-3.5 w-3.5 ml-2 text-cyan-400" />
@@ -400,7 +452,7 @@ export default function MailShieldCoverPage() {
         </motion.div>
       </section>
 
-      {/* HORIZONTAL PRODUCT PIPELINE SECTION */}
+      {/* INTERACTIVE 3D PRODUCT PIPELINE SECTION */}
       <section id="pipeline" className="relative z-10 py-20 px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/30">
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-2">
           <div className="inline-flex items-center gap-2 text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-widest">
@@ -411,45 +463,137 @@ export default function MailShieldCoverPage() {
             From Mailbox Signal to Cryptographic Dossier
           </h2>
           <p className="text-xs sm:text-sm text-muted-foreground font-sans">
-            A linear forensic pipeline that converts RFC 5322 MIME messages into explainable incident graphs.
+            Click on any pipeline stage to inspect technical inputs, outputs, and architectural guarantees.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {PIPELINE_STAGES.map((p, idx) => {
+          {PIPELINE_STAGES.map((p) => {
             const Icon = p.icon;
-            const isHovered = activeStage === idx;
             return (
-              <div
+              <TiltCard3D
                 key={p.step}
-                onMouseEnter={() => setActiveStage(idx)}
-                onMouseLeave={() => setActiveStage(null)}
-                className={cn(
-                  "p-4 rounded-xl border transition-all duration-300 relative group surface-1 hover-lift",
-                  isHovered
-                    ? "bg-[#0E1420] border-cyan-500/50 shadow-lg shadow-cyan-950/30"
-                    : "bg-[#0C1017]/60 border-border/40 hover:border-border"
-                )}
+                onClick={() => setInspectedStage(p)}
+                maxTilt={8}
+                spotlightColor="rgba(14, 165, 233, 0.22)"
+                className="bg-[#0C1017]/70 border border-border/40 hover:border-cyan-500/50 transition-colors shadow-lg"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="h-8 w-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform">
-                    <Icon className="h-4 w-4" />
+                <div className="p-4 flex flex-col justify-between h-full space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="h-8 w-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <Badge variant="outline" className="text-[9px] font-mono uppercase bg-background/60">
+                      {p.tag}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="text-[9px] font-mono uppercase bg-background/60">
-                    {p.tag}
-                  </Badge>
-                </div>
 
-                <div className="text-[10px] font-mono text-muted-foreground font-bold">{p.step}</div>
-                <h3 className="text-xs font-bold text-foreground mt-0.5 mb-1.5">{p.name}</h3>
-                <p className="text-[11px] text-muted-foreground leading-relaxed font-sans">{p.desc}</p>
-              </div>
+                  <div>
+                    <div className="text-[10px] font-mono text-muted-foreground font-bold">{p.step}</div>
+                    <h3 className="text-xs font-bold text-foreground mt-0.5 mb-1">{p.name}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed font-sans line-clamp-2">
+                      {p.desc}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/20 flex items-center justify-between text-[10px] font-mono text-cyan-400/80">
+                    <span>Inspect Specs</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </div>
+                </div>
+              </TiltCard3D>
             );
           })}
         </div>
       </section>
 
-      {/* EVIDENCE-FIRST ARCHITECTURE (3 LAYERS) */}
+      {/* PIPELINE STAGE 3D INSPECTION MODAL */}
+      <AnimatePresence>
+        {inspectedStage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.25 }}
+              className="w-full max-w-lg p-6 rounded-2xl border border-cyan-500/40 bg-[#0C1017] shadow-2xl shadow-cyan-950/50 space-y-5"
+            >
+              <div className="flex items-start justify-between border-b border-border/40 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                    <inspectedStage.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-cyan-400">{inspectedStage.step}</span>
+                      <h3 className="text-base font-extrabold text-foreground">{inspectedStage.name}</h3>
+                    </div>
+                    <p className="text-[10px] font-mono text-muted-foreground">{inspectedStage.spec}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setInspectedStage(null)}
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <p className="text-muted-foreground leading-relaxed">{inspectedStage.desc}</p>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="p-3 rounded-xl bg-card/40 border border-border/30 space-y-1.5">
+                    <span className="text-[10px] font-mono font-bold uppercase text-muted-foreground block">
+                      Ingested Telemetry
+                    </span>
+                    <ul className="space-y-1 text-[11px] font-mono text-foreground">
+                      {inspectedStage.inputs.map((inp, i) => (
+                        <li key={i} className="flex items-center gap-1.5 truncate">
+                          <span className="h-1 w-1 rounded-full bg-cyan-400 shrink-0" />
+                          <span className="truncate">{inp}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-card/40 border border-border/30 space-y-1.5">
+                    <span className="text-[10px] font-mono font-bold uppercase text-muted-foreground block">
+                      Forensic Output
+                    </span>
+                    <ul className="space-y-1 text-[11px] font-mono text-foreground">
+                      {inspectedStage.outputs.map((out, o) => (
+                        <li key={o} className="flex items-center gap-1.5 truncate">
+                          <span className="h-1 w-1 rounded-full bg-emerald-400 shrink-0" />
+                          <span className="truncate">{out}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[11px] font-mono text-cyan-300">
+                  <span className="font-bold">Architectural Guarantee: </span>
+                  {inspectedStage.guarantee}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  size="sm"
+                  onClick={() => setInspectedStage(null)}
+                  className="h-8 text-xs font-mono bg-cyan-600 hover:bg-cyan-500 text-white"
+                >
+                  Close Specification
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* EVIDENCE-FIRST ARCHITECTURE (3 LAYERS) WITH 3D TILT */}
       <section id="architecture" className="relative z-10 py-20 px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/30">
         <div className="text-center max-w-3xl mx-auto mb-14 space-y-2">
           <div className="inline-flex items-center gap-2 text-[10px] font-mono font-bold text-purple-400 uppercase tracking-widest">
@@ -468,10 +612,12 @@ export default function MailShieldCoverPage() {
           {ARCHITECTURE_LAYERS.map((layer) => {
             const Icon = layer.icon;
             return (
-              <div
+              <TiltCard3D
                 key={layer.layer}
+                maxTilt={6}
+                spotlightColor={layer.spotlight}
                 className={cn(
-                  "p-6 rounded-2xl border border-border/40 bg-[#0C1017]/70 backdrop-blur-xl surface-2 hover-lift space-y-4 border-l-[3px]",
+                  "p-6 rounded-2xl border border-border/40 bg-[#0C1017]/80 backdrop-blur-xl shadow-xl space-y-4 border-l-[3px]",
                   layer.borderColor
                 )}
               >
@@ -499,7 +645,7 @@ export default function MailShieldCoverPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </TiltCard3D>
             );
           })}
         </div>
@@ -507,7 +653,7 @@ export default function MailShieldCoverPage() {
 
       {/* TRUST & ENGINEERING PROPERTIES STRIP */}
       <section id="trust" className="relative z-10 py-16 px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/30">
-        <div className="p-6 md:p-8 rounded-2xl border border-border/40 bg-[#0C1017]/80 backdrop-blur-xl surface-1">
+        <div className="p-6 md:p-8 rounded-2xl border border-border/40 bg-[#0C1017]/85 backdrop-blur-2xl shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border/30 pb-6 mb-6">
             <div>
               <div className="flex items-center gap-2">
@@ -532,13 +678,20 @@ export default function MailShieldCoverPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {TRUST_PILLARS.map((t, ti) => (
-              <div key={ti} className="space-y-1 p-3 rounded-xl bg-card/30 border border-border/20">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3 w-3 text-cyan-400 shrink-0" />
-                  <span className="text-xs font-bold text-foreground truncate">{t.title}</span>
+              <TiltCard3D
+                key={ti}
+                maxTilt={5}
+                spotlightColor="rgba(16, 185, 129, 0.15)"
+                className="p-3 rounded-xl bg-card/30 border border-border/20"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3 text-cyan-400 shrink-0" />
+                    <span className="text-xs font-bold text-foreground truncate">{t.title}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">{t.desc}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">{t.desc}</p>
-              </div>
+              </TiltCard3D>
             ))}
           </div>
         </div>
